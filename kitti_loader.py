@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月09日 星期六 11时32分11秒
+# Last Modified : 2017年12月09日 星期六 12时03分14秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -26,19 +26,20 @@ class KittiLoader(object):
 
     # return: 
     # tag (N)
-    # label (N, N') (just raw string in the label files) (when it is not test set)
+    # label (N) (N') (just raw string in the label files) (when it is not test set)
     # rgb (N, H, W, C)
-    # raw_lidar (N, N', 4)
+    # raw_lidar (N) (N', 4)
 
-    def __init__(self, object_dir='.', queue_size=20, require_shuffle=False, is_testset=True, batch_size=1, use_precal_view=False, use_multi_process_num=0, split_file=''):
+    def __init__(self, object_dir='.', queue_size=20, require_shuffle=False, is_testset=True, batch_size=1, use_multi_process_num=0, split_file=''):
         assert(use_multi_process_num > 0)
         self.object_dir = object_dir
-        self.is_testset, self.require_shuffle, self.use_precal_view = is_testset, require_shuffle, use_precal_view
+        self.is_testset = is_testset
         self.use_multi_process_num = use_multi_process_num if not self.is_testset else 1
         self.require_shuffle = require_shuffle if not self.is_testset else False
         self.batch_size=batch_size
         self.split_file = split_file 
 
+        folder = 'testing' if self.is_testset else 'training'
         if self.split_file != '':
             # use split file  
             _tag = []
@@ -46,21 +47,21 @@ class KittiLoader(object):
             for line in open(self.split_file, 'r').readlines():
                 line = line[:-1] # remove '\n'
                 _tag.append(line)
-                self.f_rgb.append(os.path.join(self.object_dir, 'training', 'image_2', line+'.png'))
-                self.f_lidar.append(os.path.join(self.object_dir, 'training', 'velodyne', line+'.bin'))
-                self.f_label.append(os.path.join(self.object_dir, 'training', 'label_2', line+'.txt'))
+                self.f_rgb.append(os.path.join(self.object_dir, folder, 'image_2', line+'.png'))
+                self.f_lidar.append(os.path.join(self.object_dir, folder, 'velodyne', line+'.bin'))
+                self.f_label.append(os.path.join(self.object_dir, folder, 'label_2', line+'.txt'))
         else:
-            self.f_rgb = glob.glob(os.path.join(self.object_dir, 'training', 'image_2', '*.png'))
+            self.f_rgb = glob.glob(os.path.join(self.object_dir, folder, 'image_2', '*.png'))
             self.f_rgb.sort()
-            self.f_lidar = glob.glob(os.path.join(self.object_dir, 'training', 'velodyne', '*.bin'))
+            self.f_lidar = glob.glob(os.path.join(self.object_dir, folder, 'velodyne', '*.bin'))
             self.f_lidar.sort()
-            self.f_label = glob.glob(os.path.join(self.object_dir, 'training', 'label_2', '*.txt'))
+            self.f_label = glob.glob(os.path.join(self.object_dir, folder, 'label_2', '*.txt'))
             self.f_label.sort()
 
         self.data_tag =  [name.split('/')[-1].split('.')[-2] for name in self.f_label]
         assert(len(self.f_rgb) == len(self.f_lidar) == len(self.f_label) == len(self.data_tag))
         self.dataset_size = len(self.f_rgb)
-        self.alreay_extract_data = 0
+        self.already_extract_data = 0
         self.cur_frame_info = ''
 
         print("Dataset total length: {}".format(len(self.f_rgb)))
@@ -116,17 +117,17 @@ class KittiLoader(object):
         try: 
             label, rgb, raw_lidar, tag = [], [], [], []
             for _ in range(self.batch_size):
-                if self.is_testset and self.alreay_extract_data == self.dataset_size:
+                if self.is_testset and self.already_extract_data == self.dataset_size:
                     return None
                 
                 buff = self.dataset_queue.get()
                 label.append(buff[0])
                 rgb.append(buff[1])
                 raw_lidar.append(buff[2])
-                tag.append(buff[5])
-                self.cur_frame_info = buff[5]
+                tag.append(buff[3])
+                self.cur_frame_info = buff[3]
 
-                self.alreay_extract_data += 1
+                self.already_extract_data += 1
             if self.is_testset:
                 ret = (
                     np.array(tag),
@@ -146,7 +147,7 @@ class KittiLoader(object):
         return ret
 
     def load_specified(self, index=0):
-        rgb = cv2.resize(cv2.imread(self.f_rgb[load_index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT))
+        rgb = cv2.resize(cv2.imread(self.f_rgb[index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT))
         raw_lidar = np.fromfile(self.f_lidar[index], dtype=np.float32).reshape((-1, 4))
         labels = [line for line in open(self.f_label[index], 'r').readlines()]
         tag = self.data_tag[index]
@@ -168,7 +169,6 @@ class KittiLoader(object):
 
 
     def loader_worker_main(self):
-        import pycuda.autoinit 
         if self.require_shuffle:
             self.shuffle_dataset()
         while not self.work_exit.value:

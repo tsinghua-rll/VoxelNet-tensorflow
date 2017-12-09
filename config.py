@@ -4,11 +4,9 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月09日 星期六 11时28分41秒
+# Last Modified : 2017年12月09日 星期六 15时43分34秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
-
-://github.com/rbgirshick/fast-rcnn/blob/90e75082f087596f28173546cba615d41f0d38fe/lib/fast_rcnn/config.py
 
 """MV3D config system.
 """
@@ -38,10 +36,8 @@ __C.DETECT_CLASS_AMOUNT=1
 __C.DATA_SETS_TYPE='kitti'
 
 # Root directory of project
-__C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '../../../.'))
-__C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR, , 'data')
-__C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR, 'experiments', 'checkpoint')
-__C.LOG_DIR=osp.join(__C.ROOT_DIR, 'experiments', 'log')
+__C.CHECKPOINT_DIR=osp.join('checkpoint')
+__C.LOG_DIR=osp.join('log')
 
 # for data preprocess
 ## sensors
@@ -115,12 +111,11 @@ if __C.DATA_SETS_TYPE == 'kitti':
     ])
 
 # Faster-RCNN/SSD Hyper params
-__C.
 ## for ssd 
 __C.SSD_BOXES_WIDTH=[3.9//__C.TOP_X_DIVISION, 1.0//__C.TOP_X_DIVISION]
 __C.SSD_BOXES_HEIGHT=[1.6//__C.TOP_X_DIVISION, 0.6//__C.TOP_Y_DIVISION] 
 __C.SSD_BOXES_ORINT=[0, 30, 60, 90]
-__C.SSD_BOXES_AMOUNT=len(__C.SSD_BOXES_WIDTH*__C.SSD_BOXES_ORINT)
+__C.SSD_BOXES_AMOUNT=len(__C.SSD_BOXES_WIDTH)*len(__C.SSD_BOXES_ORINT)
 __C.SSD_REGRESS_CORNER=0
 
 ## for nms type
@@ -136,6 +131,12 @@ __C.RPN_NMS_THRESH=0.7
 ## for rcnn nms
 ## for rcnn training target choose
 
+
+# utils
+__C.CORNER2CENTER_AVG=True  # average version or max version 
+
+    
+    
 if __name__ == '__main__':
     print('__C.ROOT_DIR = '+__C.ROOT_DIR)
     print('__C.DATA_SETS_DIR = '+__C.DATA_SETS_DIR)
