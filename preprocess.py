@@ -4,21 +4,31 @@
 # File Name : preprocess.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月10日 星期日 21时05分03秒
+# Last Modified : 2017年12月11日 星期一 12时05分55秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import os
 import multiprocessing
 import numpy as np
 
-scene_size = np.array([4, 80, 70.4], dtype=np.float32)
-voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
-grid_size = np.array([10, 400, 352], dtype=np.int64)
-lidar_coord = np.array([0, 40, 3], dtype=np.float32)
-data_dir = 'velodyne'
-output_dir = 'voxel'
-max_point_number = 35
+from config import cfg 
 
+if cfg.DETECT_OBJ == 'Car':
+    scene_size = np.array([4, 80, 70.4], dtype=np.float32)
+    voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
+    grid_size = np.array([10, 400, 352], dtype=np.int64)
+    lidar_coord = np.array([0, 40, 3], dtype=np.float32)
+    data_dir = 'velodyne'
+    output_dir = 'voxel'
+    max_point_number = 35
+else:
+    scene_size = np.array([4, 40, 48], dtype=np.float32)
+    voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
+    grid_size = np.array([10, 200, 240], dtype=np.int64)
+    lidar_coord = np.array([0, 20, 3], dtype=np.float32)
+    data_dir = 'velodyne'
+    output_dir = 'voxel_ped'
+    max_point_number = 45
 
 def worker(filelist):
     for file in filelist:

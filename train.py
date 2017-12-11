@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月11日 星期一 02时17分54秒
+# Last Modified : 2017年12月11日 星期一 20时23分27秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -53,7 +53,7 @@ def main():
         )
         with tf.Session(config=config) as sess:
             model = RPN3D(
-                cls='Car',
+                cls=cfg.DETECT_OBJ,
                 batch_size=args.batch_size,
                 learning_rate=args.lr,
                 max_gradient_norm=5.0,

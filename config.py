@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月11日 星期一 02时47分24秒
+# Last Modified : 2017年12月11日 星期一 12时17分52秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -29,8 +29,33 @@ __C.GPU_USE_COUNT=1
 __C.GPU_MEMORY_FRACTION=0.3
 
 # selected object 
-__C.DETECT_OBJ=['Car', 'Van']
-__C.DETECT_CLASS_AMOUNT=1
+__C.DETECT_OBJ='Car' # Pedestrian/Cyclist
+if __C.DETECT_OBJ == 'Car':
+    __C.Y_MIN=-40
+    __C.Y_MAX=40
+    __C.X_MIN=0
+    __C.X_MAX=70.4
+    __C.VOXEL_X_SIZE=0.2 
+    __C.VOXEL_Y_SIZE=0.2 
+    __C.VOXEL_POINT_COUNT=35
+    __C.INPUT_WIDTH=(__C.X_MAX-__C.X_MIN)/__C.VOXEL_X_SIZE
+    __C.INPUT_HEIGHT=(__C.Y_MAX-__C.Y_MIN)/__C.VOXEL_Y_SIZE
+    __C.FEATURE_RATIO=2
+    __C.FEATURE_WIDTH=__C.INPUT_WIDTH/__C.FEATURE_RATIO 
+    __C.FEATURE_HEIGHT=__C.INPUT_HEIGHT/__C.FEATURE_RATIO 
+else:
+    __C.Y_MIN=-20
+    __C.Y_MAX=20
+    __C.X_MIN=0
+    __C.X_MAX=48 
+    __C.VOXEL_X_SIZE=0.2 
+    __C.VOXEL_Y_SIZE=0.2 
+    __C.VOXEL_POINT_COUNT=45
+    __C.INPUT_WIDTH=(__C.X_MAX-__C.X_MIN)/__C.VOXEL_X_SIZE
+    __C.INPUT_HEIGHT=(__C.Y_MAX-__C.Y_MIN)/__C.VOXEL_Y_SIZE
+    __C.FEATURE_RATIO=2
+    __C.FEATURE_WIDTH=__C.INPUT_WIDTH/__C.FEATURE_RATIO 
+    __C.FEATURE_HEIGHT=__C.INPUT_HEIGHT/__C.FEATURE_RATIO 
 
 # for data set type
 __C.DATA_SETS_TYPE='kitti'
@@ -111,28 +136,32 @@ if __C.DATA_SETS_TYPE == 'kitti':
     ])
 
 # Faster-RCNN/SSD Hyper params
-__C.CAR_RPN_POS_IOU=0.6
-__C.CAR_RPN_NEG_IOU=0.45
-__C.PED_CYC_RPN_POS_IOU=0.5
-__C.PED_CYC_RPN_NEG_IOU=0.35
+if __C.DETECT_OBJ == 'Car':
+    # car anchor 
+    __C.ANCHOR_L=3.9
+    __C.ANCHOR_W=1.6
+    __C.ANCHOR_H=1.56
+    __C.ANCHOR_Z=-1.0
+    __C.RPN_POS_IOU=0.6
+    __C.RPN_NEG_IOU=0.45
 
-# car anchor 
-__C.CAR_ANCHOR_L=3.9
-__C.CAR_ANCHOR_W=1.6
-__C.CAR_ANCHOR_H=1.56
-__C.CAR_ANCHOR_Z=-1.0
+elif __C.DETECT_OBJ == 'Pedestrian':
+    # pedestrian anchor 
+    __C.ANCHOR_L=0.8
+    __C.ANCHOR_W=0.6
+    __C.ANCHOR_H=1.73
+    __C.ANCHOR_Z=-0.6
+    __C.RPN_POS_IOU=0.5
+    __C.RPN_NEG_IOU=0.35
 
-# pedestrian anchor 
-__C.PED_ANCHOR_L=0.8
-__C.PED_ANCHOR_W=0.6
-__C.PED_ANCHOR_H=1.73
-__C.PED_ANCHOR_Z=-0.6
-
-# cyclist anchor 
-__C.CYC_ANCHOR_L=1.76
-__C.CYC_ANCHOR_W=0.6
-__C.CYC_ANCHOR_H=1.73
-__C.CYC_ANCHOR_Z=-0.6
+if __C.DETECT_OBJ == 'Cyclist':
+    # cyclist anchor 
+    __C.ANCHOR_L=1.76
+    __C.ANCHOR_W=0.6
+    __C.ANCHOR_H=1.73
+    __C.ANCHOR_Z=-0.6
+    __C.RPN_POS_IOU=0.5
+    __C.RPN_NEG_IOU=0.35
 
 ## for rpn nms
 __C.RPN_NMS_POST_TOPK=100

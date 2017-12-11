@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月10日 星期日 23时19分30秒
+# Last Modified : 2017年12月11日 星期一 20时27分26秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import numpy as np
@@ -50,15 +50,15 @@ class KittiLoader(object):
             for line in open(self.split_file, 'r').readlines():
                 line = line[:-1] # remove '\n'
                 _tag.append(line)
-                # self.f_rgb.append(os.path.join(self.object_dir, folder, 'image_2', line+'.png'))
-                # self.f_lidar.append(os.path.join(self.object_dir, folder, 'velodyne', line+'.bin'))
+                self.f_rgb.append(os.path.join(self.object_dir, folder, 'image_2', line+'.png'))
+                self.f_lidar.append(os.path.join(self.object_dir, folder, 'velodyne', line+'.bin'))
                 self.f_voxel.append(os.path.join(self.object_dir, folder, 'voxel', line+'.npz'))
                 self.f_label.append(os.path.join(self.object_dir, folder, 'label_2', line+'.txt'))
         else:
-            # self.f_rgb = glob.glob(os.path.join(self.object_dir, folder, 'image_2', '*.png'))
-            # self.f_rgb.sort()
-            # self.f_lidar = glob.glob(os.path.join(self.object_dir, folder, 'velodyne', '*.bin'))
-            # self.f_lidar.sort()
+            self.f_rgb = glob.glob(os.path.join(self.object_dir, folder, 'image_2', '*.png'))
+            self.f_rgb.sort()
+            self.f_lidar = glob.glob(os.path.join(self.object_dir, folder, 'velodyne', '*.bin'))
+            self.f_lidar.sort()
             self.f_label = glob.glob(os.path.join(self.object_dir, folder, 'label_2', '*.txt'))
             self.f_label.sort()
             self.f_voxel = glob.glob(os.path.join(self.object_dir, folder, 'voxel', '*.npz'))
@@ -112,16 +112,15 @@ class KittiLoader(object):
             else:
                 self.work_exit.value = True
 
-        labels, tag, voxel = [], [], []
+        labels, tag, voxel, rgb, raw_lidar = [], [], [], [], []
         for _ in range(batch_size):
             try:
-                # rgb = cv2.resize(cv2.imread(self.f_rgb[load_index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT))
-                # raw_lidar = np.fromfile(self.f_lidar[load_index], dtype=np.float32).reshape((-1, 4))
+                rgb.append(cv2.resize(cv2.imread(self.f_rgb[load_index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT)))
+                raw_lidar.append(np.fromfile(self.f_lidar[load_index], dtype=np.float32).reshape((-1, 4)))
                 labels.append([line for line in open(self.f_label[load_index], 'r').readlines()])
                 tag.append(self.data_tag[load_index])
                 voxel.append(np.load(self.f_voxel[load_index]))
 
-                # self.dataset_queue.put_nowait((labels, rgb, raw_lidar, tag))
                 load_index += 1
             except:
                 if not self.is_testset:  # test set just end
@@ -132,32 +131,35 @@ class KittiLoader(object):
                     self.work_exit.value = True
         
         _, vox_feature, vox_number, vox_coordinate = build_input(voxel)
-        self.dataset_queue.put_nowait((labels, (vox_feature, vox_number, vox_coordinate), tag))
+        self.dataset_queue.put_nowait((labels, (vox_feature, vox_number, vox_coordinate), rgb, raw_lidar, tag))
 
     def load(self):
         try: 
-            # label, rgb, raw_lidar, tag = [], [], [], []
             if self.is_testset and self.already_extract_data >= self.dataset_size:
                 return None
             
             buff = self.dataset_queue.get()
             label = buff[0]
-            # rgb.append(buff[1])
-            # raw_lidar.append(buff[2])
             vox_feature = buff[1][0]
             vox_number = buff[1][1]
             vox_coordinate = buff[1][2]
-            tag = buff[2]
-            self.cur_frame_info = buff[2]
+            rgb = buff[2]
+            raw_lidar = buff[3]
+            tag = buff[4]
+            self.cur_frame_info = buff[4]
 
             self.already_extract_data += self.batch_size
 
             if self.is_testset:
                 ret = (
                     np.array(tag),
+                    np.array(label),
                     np.array(vox_feature), 
                     np.array(vox_number), 
                     np.array(vox_coordinate), 
+                    np.array(rgb),
+                    np.array(raw_lidar)
+
                 )
             else:
                 ret = (
@@ -166,6 +168,8 @@ class KittiLoader(object):
                     np.array(vox_feature),
                     np.array(vox_number),
                     np.array(vox_coordinate),
+                    np.array(rgb),
+                    np.array(raw_lidar)
                 )
         except:
             print("Dataset empty!")

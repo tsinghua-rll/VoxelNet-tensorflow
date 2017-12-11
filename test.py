@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月10日 星期日 21时13分30秒
+# Last Modified : 2017年12月11日 星期一 20时14分51秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -41,7 +41,8 @@ if __name__ == '__main__':
         )
         with tf.Session(config=config) as sess:
             model = RPN3D(
-                learning_rate=args.lr,
+                cls=cfg.DETECT_OBJ,
+                batch_size=1,
                 tag=args.tag,
                 is_train=False
             )
@@ -59,7 +60,7 @@ if __name__ == '__main__':
                     with open(of_path, 'w+') as f:
                         for item in result:
                             result[1:8] = lidar_to_rgb_box(result[1:8][np.newaxis, :])[0]
-                            box2d = lidar_box3d_to_camera_box2d(result[1:8][np.newaxis, :] )[0]
+                            box2d = lidar_box3d_to_camera_box(result[1:8][np.newaxis, :], cal_projection=False)[0]
                             f.write('{:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}\n'.format(
                                 result[0], 0,0,0, *box2d, *(result[1:])))
                     print('write out {}'.format(of_path))

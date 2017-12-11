@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月11日 星期一 00时52分28秒
+# Last Modified : 2017年12月11日 星期一 12时10分40秒
 # Created By : Jialin Zhao
 
 import tensorflow as tf
@@ -12,21 +12,21 @@ import numpy as np
 
 class MiddleAndRPN:
     def __init__(self, input, alpha=1.5, beta=1, sigma=3):
-        # scale = [batchsize, 10, 400, 352, 128] should be the output of feature learning network
+        # scale = [batchsize, 10, 400/200, 352/240, 128] should be the output of feature learning network
         self.input = input  
         # groundtruth(target) - each anchor box, represent as △x, △y, △z, △l, △w, △h, rotation
-        self.targets = tf.placeholder(tf.float32, [None, 200, 176, 14]) 
+        self.targets = tf.placeholder(tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 14]) 
         # postive anchors equal to one and others equal to zero(2 anchors in 1 position)
-        self.pos_equal_one = tf.placeholder(tf.float32, [None, 200, 176, 2])
+        self.pos_equal_one = tf.placeholder(tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
         # negative anchors equal to one and others equal to zero
-        self.neg_equal_one = tf.placeholder(tf.float32, [None, 200, 176, 2])
+        self.neg_equal_one = tf.placeholder(tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
 
         #convolutinal middle layers
         temp_conv = ConvMD(3, 128, 64, 3, (2, 1, 1), (1, 1, 1), self.input)
         temp_conv = ConvMD(3, 64, 64, 3, (1, 1, 1), (0, 1, 1), temp_conv)
         temp_conv = ConvMD(3, 64, 64, 3, (2, 1, 1), (1, 1, 1), temp_conv)
         temp_conv = tf.transpose(temp_conv, perm = [0, 2, 3, 4, 1])
-        temp_conv = tf.reshape(temp_conv, [-1, 400, 352, 128])
+        temp_conv = tf.reshape(temp_conv, [-1, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128])
 
         #rpn
         #block1:
@@ -56,13 +56,13 @@ class MiddleAndRPN:
 
         #final:
         temp_conv = tf.concat([deconv3, deconv2, deconv1], -1)
-        #Probability score map, scale = [None, 200, 176, 2]
+        #Probability score map, scale = [None, 200/100, 176/120, 2]
         p_map = ConvMD(2, 768, 2, 1, (1, 1), (0, 0), temp_conv)
-        #Regression(residual) map, scale = [None, 200, 176, 14]
+        #Regression(residual) map, scale = [None, 200/100, 176/120, 14]
         r_map = ConvMD(2, 768, 14, 1, (1, 1), (0, 0), temp_conv)
-        #softmax output for positive anchor and negative anchor, scale = [None, 200, 176, 1]
+        #softmax output for positive anchor and negative anchor, scale = [None, 200/100, 176/120, 1]
         self.p_pos = tf.sigmoid(p_map)
-        self.output_shape = [200, 176]
+        self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
     
         self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos)) / tf.reduce_sum(self.pos_equal_one, [1, 2, 3])\
          + beta * (-self.neg_equal_one * tf.log(1 - self.pos)) / tf.reduce_sum(self.neg_equal_one, [1, 2, 3])
@@ -112,4 +112,4 @@ def Deconv2D(Cin, Cout, k, s, p, input):
     return tf.nn.relu(temp_conv)
 
 if(__name__ == "__main__"):
-    m = MiddleAndRPN(tf.placeholder(tf.float32, [None, 10, 400, 352, 128]))
+    m = MiddleAndRPN(tf.placeholder(tf.float32, [None, 10, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128]))

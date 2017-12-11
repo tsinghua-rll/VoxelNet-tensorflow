@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月11日 星期一 11时12分02秒
+# Last Modified : 2017年12月11日 星期一 20时29分21秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -16,12 +16,6 @@ from config import cfg
 from utils import * 
 from group_pointcloud import FeatureNet
 from rpn import MiddleAndRPN
-
-
-class GroupPC(object):
-
-    def __init__(object):
-        pass
 
 
 class RPN3D(object):
@@ -57,7 +51,7 @@ class RPN3D(object):
         self.pos_equal_one = self.rpn.pos_equal_one 
         self.neg_equal_one = self.rpn.neg_equal_one 
         self.rpn_output_shape = self.rpn.output_shape 
-        self.anchors = cal_anchors(self.rpn_output_shape)
+        self.anchors = cal_anchors()
         # for predict and image summary 
         self.rgb = tf.placeholder(tf.int64, [None, cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT, 3])
         self.bv = tf.placeholder(tf.int64, [None, cfg.TOP_WIDTH, cfg.TOP_HEIGHT, 3])
@@ -161,13 +155,15 @@ class RPN3D(object):
         return session.run(output_feed, input_feed)
    
     
-    def predict_step(self, session, data, summary=False, with_gt=False):
+    def predict_step(self, session, data, summary=False):
         # input:  
         #     (N) tag 
-        #     (N, N') label
+        #     (N, N') label(can be empty)
         #     vox_feature 
         #     vox_number 
         #     vox_coordinate
+        #     img (N, w, l, 3)
+        #     lidar (N, N', 4)
         # output: A, B, C
         #     A: (N) tag
         #     B: (N, N') (class, x, y, z, h, w, l, rz, score)
@@ -189,42 +185,44 @@ class RPN3D(object):
 
         output_feed = [self.prob_outpout, self.delta_output]
         probs, deltas = sess.run(output_feed, input_feed)
-        boxes3d = delta_to_boxes3d(deltas, self.rpn_output_shape, self.anchors, coordinate='lidar')
-        boxes2d = boxes3d[:, :, [0,1,4,5]]
-        probs = prob.reshape((self.batch_size, -1))
+        batch_boxes3d = delta_to_boxes3d(deltas, self.anchors, coordinate='lidar')
+        batch_boxes2d = batch_boxes3d[:, :, [0,1,4,5,6]]
+        batch_probs = probs.reshape((self.batch_size, -1))
         # NMS 
         ret_box3d = []
         ret_score = []
-        for idx in range(self.batch_size):
+        for batch_id in range(self.batch_size):
+            boxes2d = corner_to_standup_box2d(center_to_corner_box2d(batch_boxes2d[batch_id]))
             ind = sess.run(self.box2d_ind_after_nms, {
                 self.boxes2d: boxes2d,
-                self.boxes2d_scores: probs 
+                self.boxes2d_scores: batch_probs[batch_id]
             })    
-            tmp_box3d = boxes3d[idx, ind, ...]
-            tmp_score = probs[idx, ind]
-            ind = np.where(tmp_score >= cfg.RPN_SCORE_THRESH)[0]
-            ret_box3d.append(tmp_box[ind, ...])
-            ret_score.append(tmp_score[ind])
+            tmp_boxes3d = batch_boxes3d[batch_id, ind, ...]
+            tmp_scores = batch_probs[batch_id, ind]
+            ind = np.where(tmp_scores >= cfg.RPN_SCORE_THRESH)[0]
+            ret_box3d.append(tmp_boxes[ind, ...])
+            ret_score.append(tmp_scores[ind])
 
         ret_box3d_score = []
         for boxes3d, scores in zip(ret_box3d, ret_score):
             ret_box3d_score.append(np.concatenate([np.tile(self.cls, len(boxes3d))[:, np.newaxis], 
-                boxes3d, scores[:, np.newaxis]]))
+                boxes3d, scores[:, np.newaxis]], axis=-1))
 
         if summary:
             # only summry 1 in a batch 
             front_image = draw_lidar_box3d_on_image(img[0], ret_box3d[0], ret_score[0], 
-                    batch_gt_boxes3d[0] if with_gt else [])
+                    batch_gt_boxes3d[0])
             bird_view = lidar_to_bird_view(lidar[0])
-            bird_view = draw_lidar_box3d_on_birdview(bird_view, ret_box3d[0], ret_score[0], 
-                    batch_gt_boxes3d[0] if with_gt else [])
+            bird_view = draw_lidar_box3d_on_birdview_img(bird_view, ret_box3d[0], ret_score[0], 
+                    batch_gt_boxes3d[0])
             ret_summary = sess.run(self.predict_summary, {
                 self.rgb: front_image[np.newaxis, ...],
                 self.bv: bird_view[np.newaxis, ...]
-            })
+            }) 
+            
+            return tag, ret_box3d_score, ret_summary 
         
-        return tag, ret_box3d_score, ret_summary 
-
+        return tag, ret_box3d_score 
 
 if __name__ == '__main__':
     pass	

@@ -4,13 +4,15 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月10日 星期日 22时25分32秒
+# Last Modified : 2017年12月11日 星期一 12时08分47秒
 # Created By : Wei Zhang
 
 import os
 import numpy as np
 import tensorflow as tf
 import time
+
+from config import cfg
 
 
 class VFELayer(object):
@@ -42,9 +44,9 @@ class FeatureNet(object):
 
         # scalar
         self.batch_size = batch_size 
-        # [ΣK, 35, 7]
+        # [ΣK, 35/45, 7]
         self.feature = tf.placeholder(
-            tf.float32, [None, 35, 7], name='feature')
+            tf.float32, [None, cfg.VOXEL_POINT_COUNT, 7], name='feature')
         # [ΣK]
         self.number = tf.placeholder(tf.int64, [None], name='number')
         # [ΣK, 4], each row stores (batch, d, h, w)
@@ -57,7 +59,7 @@ class FeatureNet(object):
         self.batch_norm = tf.layers.BatchNormalization(name='batch_norm')
 
         def compute(packed):
-            # feature: [35, 7], number: scalar
+            # feature: [35/45, 7], number: scalar
             feature, number = packed
             # Use only non-empty points as input, notice that in the paper,
             # the part of output corresponding to empty points are zeroed
@@ -76,9 +78,10 @@ class FeatureNet(object):
             parallel_iterations=32,
             swap_memory=True)
 
-        # [N * 10 * 400 * 352 * 128]
+        # car: [N * 10 * 400 * 352 * 128]
+        # pedestrian/cyclist: [N * 10 * 200 * 240 * 128]
         self.outputs = tf.scatter_nd(
-            self.coordinate, voxelwise, [self.batch_size, 10, 400, 352, 128])
+            self.coordinate, voxelwise, [self.batch_size, 10, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128])
 
 
 def build_input(voxel_dict_list):
