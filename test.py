@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月09日 星期六 19时20分12秒
+# Last Modified : 2017年12月10日 星期日 21时13分30秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     with KittiLoader(object_dir=dataset_dir, queue_size=100, require_shuffle=False, is_testset=True, batch_size=16, use_multi_process_num=8) as test_loader:
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION, 
-            visible_device_list=cfg.GPU_AVAILABLE
+            visible_device_list=cfg.GPU_AVAILABLE,
             allow_growth=True)
         config = tf.ConfigProto(
             gpu_options=gpu_options,
@@ -42,7 +42,8 @@ if __name__ == '__main__':
         with tf.Session(config=config) as sess:
             model = RPN3D(
                 learning_rate=args.lr,
-                tag=args.tag
+                tag=args.tag,
+                is_train=False
             )
             while True:
                 data = test_loader.load()
@@ -60,5 +61,5 @@ if __name__ == '__main__':
                             result[1:8] = lidar_to_rgb_box(result[1:8][np.newaxis, :])[0]
                             box2d = lidar_box3d_to_camera_box2d(result[1:8][np.newaxis, :] )[0]
                             f.write('{:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}\n'.format(
-                                result[0], 0,0,0, *box2d, *result[1:]))
+                                result[0], 0,0,0, *box2d, *(result[1:])))
                     print('write out {}'.format(of_path))

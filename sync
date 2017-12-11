@@ -1,0 +1,2 @@
+#!/bin/bash
+rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress . jeasinema@166.111.138.221:/home/jeasinema/workspace/MV3D_plus

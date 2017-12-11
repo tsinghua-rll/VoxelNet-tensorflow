@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月09日 星期六 15时43分34秒
+# Last Modified : 2017年12月11日 星期一 02时47分24秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -111,25 +111,33 @@ if __C.DATA_SETS_TYPE == 'kitti':
     ])
 
 # Faster-RCNN/SSD Hyper params
-## for ssd 
-__C.SSD_BOXES_WIDTH=[3.9//__C.TOP_X_DIVISION, 1.0//__C.TOP_X_DIVISION]
-__C.SSD_BOXES_HEIGHT=[1.6//__C.TOP_X_DIVISION, 0.6//__C.TOP_Y_DIVISION] 
-__C.SSD_BOXES_ORINT=[0, 30, 60, 90]
-__C.SSD_BOXES_AMOUNT=len(__C.SSD_BOXES_WIDTH)*len(__C.SSD_BOXES_ORINT)
-__C.SSD_REGRESS_CORNER=0
+__C.CAR_RPN_POS_IOU=0.6
+__C.CAR_RPN_NEG_IOU=0.45
+__C.PED_CYC_RPN_POS_IOU=0.5
+__C.PED_CYC_RPN_NEG_IOU=0.35
 
-## for nms type
-__C.USE_GPU_NMS=0
-__C.GPUID_FOR_NMS=0
+# car anchor 
+__C.CAR_ANCHOR_L=3.9
+__C.CAR_ANCHOR_W=1.6
+__C.CAR_ANCHOR_H=1.56
+__C.CAR_ANCHOR_Z=-1.0
+
+# pedestrian anchor 
+__C.PED_ANCHOR_L=0.8
+__C.PED_ANCHOR_W=0.6
+__C.PED_ANCHOR_H=1.73
+__C.PED_ANCHOR_Z=-0.6
+
+# cyclist anchor 
+__C.CYC_ANCHOR_L=1.76
+__C.CYC_ANCHOR_W=0.6
+__C.CYC_ANCHOR_H=1.73
+__C.CYC_ANCHOR_Z=-0.6
+
 ## for rpn nms
-__C.ANCHOR_WIDTH_MIN=0
-__C.ANCHOR_HEIGHT_MIN=0
-__C.RPN_NMS_PRE_TOPK=2000
-__C.RPN_NMS_POST_TOPK=2000
+__C.RPN_NMS_POST_TOPK=100
 __C.RPN_NMS_THRESH=0.7
-## for rpn training target choose
-## for rcnn nms
-## for rcnn training target choose
+__C.RPN_SCORE_THRESH=0.6
 
 
 # utils
