@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 15时22分46秒
+# Last Modified : 2017年12月12日 星期二 16时56分44秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -24,8 +24,8 @@ parser.add_argument('-i', '--max-epoch', type=int, nargs='?', default=10,
                     help='max epoch')
 parser.add_argument('-n', '--tag', type=str, nargs='?', default='default',
                     help='set log tag')
-parser.add_argument('-b', '--batch-size', type=int, nargs='?', default=1,
-                    help='set batch size')
+parser.add_argument('-b', '--single-batch-size', type=int, nargs='?', default=1,
+                    help='set batch size for each gpu')
 parser.add_argument('-l', '--lr', type=float, nargs='?', default=0.001,
                     help='set learning rate')
 args = parser.parse_args()
@@ -42,9 +42,9 @@ def main(_):
     # TODO: split file support
     global save_model_dir
     with KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True, 
-            is_testset=False, batch_size=args.batch_size, use_multi_process_num=8) as train_loader, \
+            is_testset=False, batch_size=args.single_batch_size, use_multi_process_num=8) as train_loader, \
          KittiLoader(object_dir=os.path.join(dataset_dir, 'testing'), queue_size=50, require_shuffle=True, 
-            is_testset=False, batch_size=args.batch_size, use_multi_process_num=8) as valid_loader :
+            is_testset=False, batch_size=args.single_batch_size, use_multi_process_num=8) as valid_loader :
         
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION, 
             visible_device_list=cfg.GPU_AVAILABLE,
@@ -58,12 +58,13 @@ def main(_):
         with tf.Session(config=config) as sess:
             model = RPN3D(
                 cls=cfg.DETECT_OBJ,
-                batch_size=args.batch_size,
+                batch_size=args.single_batch_size,
                 learning_rate=args.lr,
                 max_gradient_norm=5.0,
                 is_train=True,
                 alpha=1.5,
-                beta=1
+                beta=1,
+                avail_gpus=cfg.GPU_AVAILABLE.split(',')
             )
             # param init/restore
             if tf.train.get_checkpoint_state(save_model_dir):
@@ -74,7 +75,7 @@ def main(_):
                 tf.global_variables_initializer().run()
 
             # train and validate
-            iter_per_epoch = int(len(train_loader)/args.batch_size)
+            iter_per_epoch = int(len(train_loader)/(args.single_batch_size))
             is_summary, is_summary_image, is_validate = False, False, False 
             
             summary_interval = 5
