@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 15时17分57秒
+# Last Modified : 2017年12月12日 星期二 15时24分42秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -24,9 +24,9 @@ __C = edict()
 cfg = __C
 
 # for gpu allocation
-__C.GPU_AVAILABLE='3,2,0'
+__C.GPU_AVAILABLE='0,2,3'
 __C.GPU_USE_COUNT=3
-__C.GPU_MEMORY_FRACTION=0.7
+__C.GPU_MEMORY_FRACTION=1
 
 # selected object 
 __C.DETECT_OBJ='Car' # Pedestrian/Cyclist

@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 14时26分02秒
+# Last Modified : 2017年12月12日 星期二 16时26分59秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -40,7 +40,7 @@ class RPN3D(object):
 
         # build graph
         self.feature = FeatureNet(training=is_train, batch_size=batch_size)
-        self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta)
+        self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta, training=is_train)
         self.feature_output = self.feature.outputs
         self.delta_output = self.rpn.delta_output 
         self.prob_outpout = self.rpn.prob_output 
@@ -51,8 +51,10 @@ class RPN3D(object):
         self.vox_coordinate = self.feature.coordinate
         self.targets = self.rpn.targets
         self.pos_equal_one = self.rpn.pos_equal_one 
+        self.pos_equal_one_sum = self.rpn.pos_equal_one_sum
         self.pos_equal_one_for_reg = self.rpn.pos_equal_one_for_reg
         self.neg_equal_one = self.rpn.neg_equal_one 
+        self.neg_equal_one_sum = self.rpn.neg_equal_one_sum
         self.rpn_output_shape = self.rpn.output_shape 
         self.anchors = cal_anchors()
         # for predict and image summary 
@@ -114,14 +116,18 @@ class RPN3D(object):
 
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, self.rpn_output_shape, self.anchors)
         pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
+        pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None) 
+        neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None)
         input_feed = {
             self.vox_feature: vox_feature,
             self.vox_number: vox_number,  
             self.vox_coordinate: vox_coordinate,
             self.targets: targets, 
             self.pos_equal_one: pos_equal_one,
+            self.pos_equal_one_sum: pos_equal_one_sum,
             self.pos_equal_one_for_reg: pos_equal_one_for_reg,
-            self.neg_equal_one: neg_equal_one
+            self.neg_equal_one: neg_equal_one,
+            self.neg_equal_one_sum: neg_equal_one_sum
         }
         if train:
             output_feed = [self.loss, self.reg_loss, self.cls_loss, self.gradient_norm, self.update]
@@ -147,14 +153,18 @@ class RPN3D(object):
 
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, self.rpn_output_shape, self.anchors)
         pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
+        pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None) 
+        neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None)
         input_feed = {
             self.vox_feature: vox_feature,
             self.vox_number: vox_number,  
             self.vox_coordinate: vox_coordinate,
             self.targets: targets, 
             self.pos_equal_one: pos_equal_one,
+            self.pos_equal_one_sum: pos_equal_one_sum,
             self.pos_equal_one_for_reg: pos_equal_one_for_reg,
-            self.neg_equal_one: neg_equal_one 
+            self.neg_equal_one: neg_equal_one, 
+            self.neg_equal_one_sum: neg_equal_one_sum
         }
         output_feed = [self.loss, self.reg_loss, self.cls_loss]
         if summary:

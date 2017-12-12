@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 14时44分24秒
+# Last Modified : 2017年12月12日 星期二 15时58分55秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
