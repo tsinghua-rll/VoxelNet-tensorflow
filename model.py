@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 19时05分04秒
+# Last Modified : 2017年12月12日 星期二 19时54分48秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -41,8 +41,15 @@ class RPN3D(object):
         self.avail_gpus = avail_gpus
 
         # build graph
-        # for dev in self.avail_gpus:
-        #     with tf.device('/gpu:{}'.format(dev)):
+        tower_grads = []
+        for dev in self.avail_gpus:
+            with tf.device('/gpu:{}'.format(dev)):
+                with tf.name_scope('{}'.format(dev)) as scope:
+                    self.feature = FeatureNet(training=is_train, batch_size=batch_size)
+                    self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta, training=is_train)
+                    self.feature_output = self.feature.outputs
+                    self.delta_output = self.rpn.delta_output 
+                    self.prob_outpout = self.rpn.prob_output 
 
         self.feature = FeatureNet(training=is_train, batch_size=batch_size)
         self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta, training=is_train)
