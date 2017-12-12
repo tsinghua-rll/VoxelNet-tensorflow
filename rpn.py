@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月12日 星期二 16时50分00秒
+# Last Modified : 2017年12月12日 星期二 19时01分26秒
 # Created By : Jialin Zhao
 
 import tensorflow as tf
@@ -12,6 +12,8 @@ import numpy as np
 
 from config import cfg
 
+
+small_addon_for_BCE=1e-6
 
 class MiddleAndRPN:
     def __init__(self, input, alpha=1.5, beta=1, sigma=3, training=True):
@@ -72,8 +74,8 @@ class MiddleAndRPN:
         self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
     
         # TODO: sometime still get inf cls loss
-        self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos)) / self.pos_equal_one_sum \
-         + beta * (-self.neg_equal_one * tf.log(1 - self.p_pos)) / self.neg_equal_one_sum
+        self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos + small_addon_for_BCE)) / self.pos_equal_one_sum \
+         + beta * (-self.neg_equal_one * tf.log(1 - self.p_pos + small_addon_for_BCE)) / self.neg_equal_one_sum
         self.cls_loss = tf.reduce_sum(self.cls_loss)
 
         self.reg_loss = smooth_l1(r_map * self.pos_equal_one_for_reg, self.targets * self.pos_equal_one_for_reg, sigma) / self.pos_equal_one_sum
@@ -82,7 +84,7 @@ class MiddleAndRPN:
         self.loss = tf.reduce_sum(self.cls_loss + self.reg_loss)
 
         self.delta_output = r_map 
-        self.prob_output = p_map
+        self.prob_output = p_pos
 
 
 def smooth_l1(deltas, targets, sigma=3.0):

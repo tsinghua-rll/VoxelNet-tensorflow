@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 17时30分16秒
+# Last Modified : 2017年12月12日 星期二 19时05分04秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -48,7 +48,7 @@ class RPN3D(object):
         self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta, training=is_train)
         self.feature_output = self.feature.outputs
         self.delta_output = self.rpn.delta_output 
-        self.prob_outpout = self.rpn.prob_output 
+        self.prob_output = self.rpn.prob_output 
      
         # input placeholders
         self.vox_feature = self.feature.feature 
@@ -205,7 +205,7 @@ class RPN3D(object):
             self.vox_coordinate: vox_coordinate,
         }
 
-        output_feed = [self.prob_outpout, self.delta_output]
+        output_feed = [self.prob_output, self.delta_output]
         probs, deltas = session.run(output_feed, input_feed)
         # BOTTLENECK
         batch_boxes3d = delta_to_boxes3d(deltas, self.anchors, coordinate='lidar')
