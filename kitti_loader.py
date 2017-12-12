@@ -4,9 +4,10 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月11日 星期一 20时27分26秒
+# Last Modified : 2017年12月11日 星期一 20时54分12秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
+import cv2
 import numpy as np
 import os
 import sys
@@ -33,7 +34,7 @@ class KittiLoader(object):
     # vox_coordinate 
 
     def __init__(self, object_dir='.', queue_size=20, require_shuffle=False, is_testset=True, batch_size=1, use_multi_process_num=0, split_file=''):
-        assert(use_multi_process_num > 0)
+        assert(use_multi_process_num >= 0)
         self.object_dir = object_dir
         self.is_testset = is_testset
         self.use_multi_process_num = use_multi_process_num if not self.is_testset else 1
@@ -67,7 +68,7 @@ class KittiLoader(object):
 
         self.data_tag =  [name.split('/')[-1].split('.')[-2] for name in self.f_label]
         # assert(len(self.f_rgb) == len(self.f_lidar) == len(self.f_label) == len(self.data_tag))
-        # assert(len(self.f_voxel) == len(self.f_label) == len(self.data_tag))
+        assert(len(self.f_voxel) == len(self.f_label) == len(self.data_tag) == len(self.f_rgb) == len(self.f_lidar))
         self.dataset_size = len(self.f_label)
         self.already_extract_data = 0
         self.cur_frame_info = ''
@@ -214,8 +215,8 @@ class KittiLoader(object):
         # to prevent diff loader load same data
         index = shuffle([i for i in range(len(self.f_label))], random_state=random.randint(0, self.use_multi_process_num**5))
         self.f_label = [self.f_label[i] for i in index]
-        # self.f_rgb = [self.f_rgb[i] for i in index]
-        # self.f_lidar = [self.f_lidar[i] for i in index]
+        self.f_rgb = [self.f_rgb[i] for i in index]
+        self.f_lidar = [self.f_lidar[i] for i in index]
         self.f_voxel = [self.f_voxel[i] for i in index]
         self.data_tag = [self.data_tag[i] for i in index]
 

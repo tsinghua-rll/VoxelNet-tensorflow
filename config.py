@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月11日 星期一 12时17分52秒
+# Last Modified : 2017年12月12日 星期二 11时34分00秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -24,9 +24,9 @@ __C = edict()
 cfg = __C
 
 # for gpu allocation
-__C.GPU_AVAILABLE='1'
-__C.GPU_USE_COUNT=1
-__C.GPU_MEMORY_FRACTION=0.3
+__C.GPU_AVAILABLE='0,1,2,3'
+__C.GPU_USE_COUNT=4
+__C.GPU_MEMORY_FRACTION=1
 
 # selected object 
 __C.DETECT_OBJ='Car' # Pedestrian/Cyclist
@@ -38,11 +38,11 @@ if __C.DETECT_OBJ == 'Car':
     __C.VOXEL_X_SIZE=0.2 
     __C.VOXEL_Y_SIZE=0.2 
     __C.VOXEL_POINT_COUNT=35
-    __C.INPUT_WIDTH=(__C.X_MAX-__C.X_MIN)/__C.VOXEL_X_SIZE
-    __C.INPUT_HEIGHT=(__C.Y_MAX-__C.Y_MIN)/__C.VOXEL_Y_SIZE
+    __C.INPUT_WIDTH=int((__C.X_MAX-__C.X_MIN)/__C.VOXEL_X_SIZE)
+    __C.INPUT_HEIGHT=int((__C.Y_MAX-__C.Y_MIN)/__C.VOXEL_Y_SIZE)
     __C.FEATURE_RATIO=2
-    __C.FEATURE_WIDTH=__C.INPUT_WIDTH/__C.FEATURE_RATIO 
-    __C.FEATURE_HEIGHT=__C.INPUT_HEIGHT/__C.FEATURE_RATIO 
+    __C.FEATURE_WIDTH=int(__C.INPUT_WIDTH/__C.FEATURE_RATIO)
+    __C.FEATURE_HEIGHT=int(__C.INPUT_HEIGHT/__C.FEATURE_RATIO)
 else:
     __C.Y_MIN=-20
     __C.Y_MAX=20
@@ -51,11 +51,12 @@ else:
     __C.VOXEL_X_SIZE=0.2 
     __C.VOXEL_Y_SIZE=0.2 
     __C.VOXEL_POINT_COUNT=45
-    __C.INPUT_WIDTH=(__C.X_MAX-__C.X_MIN)/__C.VOXEL_X_SIZE
-    __C.INPUT_HEIGHT=(__C.Y_MAX-__C.Y_MIN)/__C.VOXEL_Y_SIZE
+    __C.INPUT_WIDTH=int((__C.X_MAX-__C.X_MIN)/__C.VOXEL_X_SIZE)
+    __C.INPUT_HEIGHT=int((__C.Y_MAX-__C.Y_MIN)/__C.VOXEL_Y_SIZE)
     __C.FEATURE_RATIO=2
-    __C.FEATURE_WIDTH=__C.INPUT_WIDTH/__C.FEATURE_RATIO 
-    __C.FEATURE_HEIGHT=__C.INPUT_HEIGHT/__C.FEATURE_RATIO 
+    __C.FEATURE_WIDTH=int(__C.INPUT_WIDTH/__C.FEATURE_RATIO)
+    __C.FEATURE_HEIGHT=int(__C.INPUT_HEIGHT/__C.FEATURE_RATIO)
+
 
 # for data set type
 __C.DATA_SETS_TYPE='kitti'

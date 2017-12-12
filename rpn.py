@@ -4,11 +4,14 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月11日 星期一 12时10分40秒
+# Last Modified : 2017年12月11日 星期一 21时06分33秒
 # Created By : Jialin Zhao
 
 import tensorflow as tf
 import numpy as np
+
+from config import cfg
+
 
 class MiddleAndRPN:
     def __init__(self, input, alpha=1.5, beta=1, sigma=3):
@@ -18,6 +21,7 @@ class MiddleAndRPN:
         self.targets = tf.placeholder(tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 14]) 
         # postive anchors equal to one and others equal to zero(2 anchors in 1 position)
         self.pos_equal_one = tf.placeholder(tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
+        self.pos_equal_one_for_reg = tf.placeholder(tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 14])
         # negative anchors equal to one and others equal to zero
         self.neg_equal_one = tf.placeholder(tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
 
@@ -65,9 +69,11 @@ class MiddleAndRPN:
         self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
     
         self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos)) / tf.reduce_sum(self.pos_equal_one, [1, 2, 3])\
-         + beta * (-self.neg_equal_one * tf.log(1 - self.pos)) / tf.reduce_sum(self.neg_equal_one, [1, 2, 3])
-         
-        self.reg_loss = smooth_l1(r_map * self.pos_equal_one, self.targets * self.pos_equal_one, sigma) / tf.reduce_sum(self.pos_equal_one, [1, 2, 3])
+         + beta * (-self.neg_equal_one * tf.log(1 - self.p_pos)) / tf.reduce_sum(self.neg_equal_one, [1, 2, 3])
+        self.cls_loss = tf.reduce_sum(self.cls_loss)
+
+        self.reg_loss = smooth_l1(r_map * self.pos_equal_one_for_reg, self.targets * self.pos_equal_one_for_reg, sigma) / tf.reduce_sum(self.pos_equal_one, [1, 2, 3])
+        self.reg_loss = tf.reduce_sum(self.reg_loss)
 
         self.loss = tf.reduce_sum(self.cls_loss + self.reg_loss)
 

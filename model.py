@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月11日 星期一 20时29分21秒
+# Last Modified : 2017年12月12日 星期二 11时05分08秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -49,13 +49,14 @@ class RPN3D(object):
         self.vox_coordinate = self.feature.coordinate
         self.targets = self.rpn.targets
         self.pos_equal_one = self.rpn.pos_equal_one 
+        self.pos_equal_one_for_reg = self.rpn.pos_equal_one_for_reg
         self.neg_equal_one = self.rpn.neg_equal_one 
         self.rpn_output_shape = self.rpn.output_shape 
         self.anchors = cal_anchors()
         # for predict and image summary 
-        self.rgb = tf.placeholder(tf.int64, [None, cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT, 3])
-        self.bv = tf.placeholder(tf.int64, [None, cfg.TOP_WIDTH, cfg.TOP_HEIGHT, 3])
-        self.boxes2d = tf.placeholder(tf.int64, [None, 4])
+        self.rgb = tf.placeholder(tf.uint8, [None, cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT, 3])
+        self.bv = tf.placeholder(tf.uint8, [None, cfg.TOP_WIDTH, cfg.TOP_HEIGHT, 3])
+        self.boxes2d = tf.placeholder(tf.float32, [None, 4])
         self.boxes2d_scores = tf.placeholder(tf.float32, [None])
 
         # NMS(2D)
@@ -66,9 +67,9 @@ class RPN3D(object):
         self.reg_loss = self.rpn.reg_loss 
         self.cls_loss = self.rpn.cls_loss 
         self.params = tf.trainable_variables()
-        opt = tf.AdamOptimizer(self.learing_rate)
+        opt = tf.train.AdamOptimizer(self.learning_rate)
         gradients = tf.gradients(self.loss, self.params)
-        clipped_gradients, self.gradient_norm = tf.clip_by_global_norm(gradients, max_gradients_norm)
+        clipped_gradients, self.gradient_norm = tf.clip_by_global_norm(gradients, max_gradient_norm)
         self.update = opt.apply_gradients(zip(clipped_gradients, self.params), global_step=self.global_step)
     
         # summary and saver
@@ -110,13 +111,15 @@ class RPN3D(object):
         vox_coordinate = data[4]
 
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, self.rpn_output_shape, self.anchors)
+        pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
         input_feed = {
             self.vox_feature: vox_feature,
             self.vox_number: vox_number,  
             self.vox_coordinate: vox_coordinate,
             self.targets: targets, 
             self.pos_equal_one: pos_equal_one,
-            self.neg_equal_one: neg_equal_one 
+            self.pos_equal_one_for_reg: pos_equal_one_for_reg,
+            self.neg_equal_one: neg_equal_one
         }
         if train:
             output_feed = [self.loss, self.reg_loss, self.cls_loss, self.gradient_norm, self.update]
@@ -185,6 +188,7 @@ class RPN3D(object):
 
         output_feed = [self.prob_outpout, self.delta_output]
         probs, deltas = sess.run(output_feed, input_feed)
+        # BOTTLENECK
         batch_boxes3d = delta_to_boxes3d(deltas, self.anchors, coordinate='lidar')
         batch_boxes2d = batch_boxes3d[:, :, [0,1,4,5,6]]
         batch_probs = probs.reshape((self.batch_size, -1))
@@ -192,6 +196,7 @@ class RPN3D(object):
         ret_box3d = []
         ret_score = []
         for batch_id in range(self.batch_size):
+            # BOTTLENECK
             boxes2d = corner_to_standup_box2d(center_to_corner_box2d(batch_boxes2d[batch_id]))
             ind = sess.run(self.box2d_ind_after_nms, {
                 self.boxes2d: boxes2d,
