@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月12日 星期二 19时01分26秒
+# Last Modified : 2017年12月12日 星期二 19时06分54秒
 # Created By : Jialin Zhao
 
 import tensorflow as tf
@@ -84,7 +84,7 @@ class MiddleAndRPN:
         self.loss = tf.reduce_sum(self.cls_loss + self.reg_loss)
 
         self.delta_output = r_map 
-        self.prob_output = p_pos
+        self.prob_output = self.p_pos
 
 
 def smooth_l1(deltas, targets, sigma=3.0):
