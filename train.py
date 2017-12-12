@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 11时33分24秒
+# Last Modified : 2017年12月12日 星期二 15时22分46秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -41,14 +41,14 @@ save_model_dir = os.path.join('./save_model', args.tag, 'checkpoint')
 def main(_):
     # TODO: split file support
     global save_model_dir
-    with KittiLoader(object_dir=dataset_dir, queue_size=10, require_shuffle=True, 
+    with KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True, 
             is_testset=False, batch_size=args.batch_size, use_multi_process_num=8) as train_loader, \
-         KittiLoader(object_dir=dataset_dir, queue_size=5, require_shuffle=True, 
+         KittiLoader(object_dir=os.path.join(dataset_dir, 'testing'), queue_size=50, require_shuffle=True, 
             is_testset=False, batch_size=args.batch_size, use_multi_process_num=8) as valid_loader :
         
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION, 
             visible_device_list=cfg.GPU_AVAILABLE,
-            allow_growth=False)
+            allow_growth=True)
         config = tf.ConfigProto(
             gpu_options=gpu_options,
             device_count={
@@ -77,10 +77,10 @@ def main(_):
             iter_per_epoch = int(len(train_loader)/args.batch_size)
             is_summary, is_summary_image, is_validate = False, False, False 
             
-            summary_interval = 20
-            summary_image_interval = 100
+            summary_interval = 5
+            summary_image_interval = 20
             save_model_interval = iter_per_epoch
-            validate_interval = 200
+            validate_interval = 100
             
             summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
             while model.epoch.eval() < args.max_epoch:
@@ -92,15 +92,15 @@ def main(_):
                     is_summary_image = True 
                 if not iter % save_model_interval:
                     model.saver.save(sess, save_model_dir, global_step=model.global_step)
-                if iter % validate_interval:
+                if not iter % validate_interval:
                     is_validate = True
-                if iter % iter_per_epoch:
+                if not iter % iter_per_epoch:
                     sess.run(model.epoch_add_op)
                     print('train {} epoch, total: {}'.format(model.epoch.eval(), args.max_epoch))
 
                 ret = model.train_step(sess, train_loader.load(), train=True, summary=is_summary)
                 print('train: {}/{} @ epoch:{}/{} loss: {} reg_loss: {} cls_loss: {} {}'.format(iter, 
-                    iter_per_epoch*args.max_epoch, model.epoch.eval(), args.max_epoch, ret[0], ret[1], ret[2]))
+                    iter_per_epoch*args.max_epoch, model.epoch.eval(), args.max_epoch, ret[0], ret[1], ret[2], args.tag))
 
                 if is_summary:
                     summary_writer.add_summary(ret[-1], iter)

@@ -4,9 +4,10 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 11时16分13秒
+# Last Modified : 2017年12月12日 星期二 14时44分24秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
+import cv2
 import numpy as np 
 import shapely.geometry
 import shapely.affinity
@@ -48,7 +49,7 @@ def camera_to_lidar_point(points):
         p = np.matmul(np.linalg.inv(np.array(cfg.MATRIX_T_VELO_2_CAM)), p)
         p = p[0:3]
         ret.append(p)
-    return np.array(ret)
+    return np.array(ret).reshape(-1, 3)
 
  
 def lidar_to_camera_point(points):
@@ -61,7 +62,7 @@ def lidar_to_camera_point(points):
         p = np.matmul(np.array(cfg.MATRIX_R_RECT_0), p)
         p = p[0:3]
         ret.append(p)
-    return np.array(ret)
+    return np.array(ret).reshape(-1, 3)
 
  
 def camera_to_lidar_box(boxes):
@@ -71,7 +72,7 @@ def camera_to_lidar_box(boxes):
         x, y, z, h, w, l, ry = box
         (x, y, z), h, w, l, rz = camera_to_lidar(x, y, z), h, w, l, -ry-np.pi/2
         ret.append([x, y, z, h, w, l, rz])
-    return np.array(ret)
+    return np.array(ret).reshape(-1, 7)
 
  
 def lidar_to_camera_box(boxes):
@@ -81,7 +82,7 @@ def lidar_to_camera_box(boxes):
         x, y, z, h, w, l, rz = box
         (x, y, z), h, w, l, ry = lidar_to_camera(x, y, z), h, w, l, -rz-np.pi/2
         ret.append([x, y, z, h, w, l, ry])
-    return np.array(ret)
+    return np.array(ret).reshape(-1, 7)
 
 
 def center_to_corner_box2d(boxes_center):
@@ -230,7 +231,7 @@ def lidar_box3d_to_camera_box(boxes3d, cal_projection=False):
     boxes2d = np.zeros((num, 4), dtype=np.int32)
     projections = np.zeros((num, 8, 2), dtype=np.float32)
 
-    boxes3d_corner = center_to_corner_box3d(boxes3d_center)
+    boxes3d_corner = center_to_corner_box3d(boxes3d)
     # TODO: here maybe some problems, check Mt/Kt
     Mt = np.array(cfg.MATRIX_Mt)
     Kt = np.array(cfg.MATRIX_Kt)
@@ -250,7 +251,7 @@ def lidar_box3d_to_camera_box(boxes3d, cal_projection=False):
         miny = int(np.min(qs[:, 1]))
         maxy = int(np.max(qs[:, 1]))
         
-        boxes2d[n, 1:5] = minx, miny, maxx, maxy
+        boxes2d[n, :] = minx, miny, maxx, maxy
     
     return projections if cal_projection else boxes2d
 
@@ -264,8 +265,8 @@ def lidar_to_bird_view_img(lidar):
     birdview = np.zeros((cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 1))
     for point in lidar:
         x, y = point[0:2]
-        if cfg.X_MIN < x < cfg.X_MAX and cfg.Y_MIN < y < cfg.Y_MIN:
-            x, y = (x - cfg.X_MIN) / cfg.VOXEL_X_SIZE, (y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE 
+        if cfg.X_MIN < x < cfg.X_MAX and cfg.Y_MIN < y < cfg.Y_MAX:
+            x, y = int((x - cfg.X_MIN) / cfg.VOXEL_X_SIZE), int((y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE)
             birdview[y, x] += 1
     birdview = birdview - np.min(birdview)
     divisor = np.max(birdview) - np.min(birdview)
@@ -276,7 +277,7 @@ def lidar_to_bird_view_img(lidar):
 
 
  
-def draw_lidar_box3d_on_image(img, boxse3d, scores, gt_boxes3d=[], 
+def draw_lidar_box3d_on_image(img, boxes3d, scores, gt_boxes3d=np.array([]), 
         color=(255,255,0), gt_color=(255,0,255), thickness=1):
     # Input:
     #   img: (h, w, 3)
@@ -315,16 +316,16 @@ def draw_lidar_box3d_on_image(img, boxse3d, scores, gt_boxes3d=[],
 
 
  
-def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=[], 
+def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array([]), 
         color=(255,255,0), gt_color=(255,0,255), thickness=1):
     # Input:
     #   birdview: (h, w, 3)
-    #   boxes3d (N, 8) [x, y, z, h, w, l, r]
+    #   boxes3d (N, 7) [x, y, z, h, w, l, r]
     #   scores 
     #   gt_boxes3d (N, 7) [x, y, z, h, w, l, r]
     img = birdview.copy()
     corner_boxes3d = center_to_corner_box3d(boxes3d) 
-    cornet_gt_boxes3d = center_to_corner_box3d(gt_boxes3d)
+    corner_gt_boxes3d = center_to_corner_box3d(gt_boxes3d)
     # draw gt 
     for box in corner_gt_boxes3d:
         x0, y0 = lidar_to_bird_view(*box[0, 0:2])
@@ -332,10 +333,10 @@ def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=[],
         x2, y2 = lidar_to_bird_view(*box[2, 0:2])
         x3, y3 = lidar_to_bird_view(*box[3, 0:2])
         
-        cv2.line(img, (x0, y0), (x1, y1), gt_color, thickness, cv2.LINE_AA)
-        cv2.line(img, (x1, y1), (x2, y2), gt_color, thickness, cv2.LINE_AA)
-        cv2.line(img, (x2, y2), (x3, y3), gt_color, thickness, cv2.LINE_AA)
-        cv2.line(img, (x3, y3), (x1, y1), gt_color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x0), int(y0)), (int(x1), int(y1)), gt_color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x1), int(y1)), (int(x2), int(y2)), gt_color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x2), int(y2)), (int(x3), int(y3)), gt_color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x3), int(y3)), (int(x0), int(y0)), gt_color, thickness, cv2.LINE_AA)
 
     # draw detections 
     for box in corner_boxes3d:
@@ -344,10 +345,10 @@ def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=[],
         x2, y2 = lidar_to_bird_view(*box[2, 0:2])
         x3, y3 = lidar_to_bird_view(*box[3, 0:2])
         
-        cv2.line(img, (x0, y0), (x1, y1), color, thickness, cv2.LINE_AA)
-        cv2.line(img, (x1, y1), (x2, y2), color, thickness, cv2.LINE_AA)
-        cv2.line(img, (x2, y2), (x3, y3), color, thickness, cv2.LINE_AA)
-        cv2.line(img, (x3, y3), (x1, y1), color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x0), int(y0)), (int(x1), int(y1)), color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x2), int(y2)), (int(x3), int(y3)), color, thickness, cv2.LINE_AA)
+        cv2.line(img, (int(x3), int(y3)), (int(x0), int(y0)), color, thickness, cv2.LINE_AA)
 
     return img.astype(np.uint8) 
    
@@ -378,7 +379,8 @@ def label_to_gt_box3d(labels, cls='Car', coordinate='camera'):
                 boxes3d_a_label.append(box3d)
         if coordinate == 'lidar':
             boxes3d_a_label = camera_to_lidar_box(np.array(boxes3d_a_label))
-        boxes3d.append(np.array(boxes3d_a_label))
+            
+        boxes3d.append(np.array(boxes3d_a_label).reshape(-1, 7))
     return boxes3d 
 
 
@@ -586,15 +588,17 @@ def delta_to_boxes3d(deltas, anchors, coordinate='lidar'):
     # Input:
     #   deltas: (N, w, l, 14)
     #   feature_map_shape: (w, l)
-    #   anchors: (w*l*2, 7)
+    #   anchors: (w, l, 2, 7)
+
     # Ouput:
     #   boxes3d: (N, w*l*2, 7)
+    anchors_reshaped = anchors.reshape(-1, 7)
     deltas = deltas.reshape(deltas.shape[0], -1, 7)
-    anchors_d = np.sqrt(anchors[:, 4]**2 + anchors[:, 5]**2)
+    anchors_d = np.sqrt(anchors_reshaped[:, 4]**2 + anchors_reshaped[:, 5]**2)
     boxes3d = np.zeros_like(deltas)
-    boxes3d[..., [0, 1, 2]] = deltas[..., [0, 1, 2]]*anchors_d + anchors[..., [0, 1, 2]]
-    boxes3d[..., [3, 4, 5]] = np.exp(deltas[..., [3, 4, 5]]) * anchors[..., [3, 4, 5]]
-    boxes3d[..., 6] = deltas[..., 6] + anchors[..., 6]
+    boxes3d[..., [0, 1, 2]] = deltas[..., [0, 1, 2]]*anchors_d[:, np.newaxis] + anchors_reshaped[..., [0, 1, 2]]
+    boxes3d[..., [3, 4, 5]] = np.exp(deltas[..., [3, 4, 5]]) * anchors_reshaped[..., [3, 4, 5]]
+    boxes3d[..., 6] = deltas[..., 6] + anchors_reshaped[..., 6]
     
     return boxes3d 
 

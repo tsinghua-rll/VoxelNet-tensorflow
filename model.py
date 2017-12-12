@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 11时05分08秒
+# Last Modified : 2017年12月12日 星期二 14时26分02秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -30,6 +30,7 @@ class RPN3D(object):
             is_train=True):
         # hyper parameters and status
         self.cls = cls 
+        self.batch_size = batch_size
         self.learning_rate = tf.Variable(float(learning_rate), trainable=False, dtype=tf.float32)
         self.global_step = tf.Variable(1, trainable=False)
         self.epoch = tf.Variable(0, trainable=False)
@@ -40,6 +41,7 @@ class RPN3D(object):
         # build graph
         self.feature = FeatureNet(training=is_train, batch_size=batch_size)
         self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta)
+        self.feature_output = self.feature.outputs
         self.delta_output = self.rpn.delta_output 
         self.prob_outpout = self.rpn.prob_output 
      
@@ -54,8 +56,8 @@ class RPN3D(object):
         self.rpn_output_shape = self.rpn.output_shape 
         self.anchors = cal_anchors()
         # for predict and image summary 
-        self.rgb = tf.placeholder(tf.uint8, [None, cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT, 3])
-        self.bv = tf.placeholder(tf.uint8, [None, cfg.TOP_WIDTH, cfg.TOP_HEIGHT, 3])
+        self.rgb = tf.placeholder(tf.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
+        self.bv = tf.placeholder(tf.uint8, [None, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 3])
         self.boxes2d = tf.placeholder(tf.float32, [None, 4])
         self.boxes2d_scores = tf.placeholder(tf.float32, [None])
 
@@ -144,12 +146,14 @@ class RPN3D(object):
         vox_coordinate = data[4]
 
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, self.rpn_output_shape, self.anchors)
+        pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
         input_feed = {
             self.vox_feature: vox_feature,
             self.vox_number: vox_number,  
             self.vox_coordinate: vox_coordinate,
             self.targets: targets, 
             self.pos_equal_one: pos_equal_one,
+            self.pos_equal_one_for_reg: pos_equal_one_for_reg,
             self.neg_equal_one: neg_equal_one 
         }
         output_feed = [self.loss, self.reg_loss, self.cls_loss]
@@ -187,7 +191,7 @@ class RPN3D(object):
         }
 
         output_feed = [self.prob_outpout, self.delta_output]
-        probs, deltas = sess.run(output_feed, input_feed)
+        probs, deltas = session.run(output_feed, input_feed)
         # BOTTLENECK
         batch_boxes3d = delta_to_boxes3d(deltas, self.anchors, coordinate='lidar')
         batch_boxes2d = batch_boxes3d[:, :, [0,1,4,5,6]]
@@ -197,15 +201,16 @@ class RPN3D(object):
         ret_score = []
         for batch_id in range(self.batch_size):
             # BOTTLENECK
+            # TODO: if possible, use rotate NMS
             boxes2d = corner_to_standup_box2d(center_to_corner_box2d(batch_boxes2d[batch_id]))
-            ind = sess.run(self.box2d_ind_after_nms, {
+            ind = session.run(self.box2d_ind_after_nms, {
                 self.boxes2d: boxes2d,
                 self.boxes2d_scores: batch_probs[batch_id]
             })    
             tmp_boxes3d = batch_boxes3d[batch_id, ind, ...]
             tmp_scores = batch_probs[batch_id, ind]
             ind = np.where(tmp_scores >= cfg.RPN_SCORE_THRESH)[0]
-            ret_box3d.append(tmp_boxes[ind, ...])
+            ret_box3d.append(tmp_boxes3d[ind, ...])
             ret_score.append(tmp_scores[ind])
 
         ret_box3d_score = []
@@ -217,10 +222,10 @@ class RPN3D(object):
             # only summry 1 in a batch 
             front_image = draw_lidar_box3d_on_image(img[0], ret_box3d[0], ret_score[0], 
                     batch_gt_boxes3d[0])
-            bird_view = lidar_to_bird_view(lidar[0])
-            bird_view = draw_lidar_box3d_on_birdview_img(bird_view, ret_box3d[0], ret_score[0], 
+            bird_view = lidar_to_bird_view_img(lidar[0])
+            bird_view = draw_lidar_box3d_on_birdview(bird_view, ret_box3d[0], ret_score[0], 
                     batch_gt_boxes3d[0])
-            ret_summary = sess.run(self.predict_summary, {
+            ret_summary = session.run(self.predict_summary, {
                 self.rgb: front_image[np.newaxis, ...],
                 self.bv: bird_view[np.newaxis, ...]
             }) 

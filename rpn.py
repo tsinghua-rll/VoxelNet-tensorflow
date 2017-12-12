@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月11日 星期一 21时06分33秒
+# Last Modified : 2017年12月12日 星期二 14时58分13秒
 # Created By : Jialin Zhao
 
 import tensorflow as tf
@@ -68,11 +68,11 @@ class MiddleAndRPN:
         self.p_pos = tf.sigmoid(p_map)
         self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
     
-        self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos)) / tf.reduce_sum(self.pos_equal_one, [1, 2, 3])\
-         + beta * (-self.neg_equal_one * tf.log(1 - self.p_pos)) / tf.reduce_sum(self.neg_equal_one, [1, 2, 3])
+        self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos)) / tf.reshape(tf.reduce_sum(self.pos_equal_one, [1, 2, 3]), [-1,1,1,1])\
+         + beta * (-self.neg_equal_one * tf.log(1 - self.p_pos)) / tf.reshape(tf.reduce_sum(self.neg_equal_one, [1, 2, 3]), [-1,1,1,1])
         self.cls_loss = tf.reduce_sum(self.cls_loss)
 
-        self.reg_loss = smooth_l1(r_map * self.pos_equal_one_for_reg, self.targets * self.pos_equal_one_for_reg, sigma) / tf.reduce_sum(self.pos_equal_one, [1, 2, 3])
+        self.reg_loss = smooth_l1(r_map * self.pos_equal_one_for_reg, self.targets * self.pos_equal_one_for_reg, sigma) / tf.reshape(tf.reduce_sum(self.pos_equal_one, [1, 2, 3]), [-1,1,1,1])
         self.reg_loss = tf.reduce_sum(self.reg_loss)
 
         self.loss = tf.reduce_sum(self.cls_loss + self.reg_loss)

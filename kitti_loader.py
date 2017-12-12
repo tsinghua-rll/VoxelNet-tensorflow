@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月11日 星期一 20时54分12秒
+# Last Modified : 2017年12月12日 星期二 15时11分08秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -42,7 +42,6 @@ class KittiLoader(object):
         self.batch_size=batch_size if not self.is_testset else 1
         self.split_file = split_file 
 
-        folder = 'testing' if self.is_testset else 'training'
         if self.split_file != '':
             # use split file  
             _tag = []
@@ -51,18 +50,18 @@ class KittiLoader(object):
             for line in open(self.split_file, 'r').readlines():
                 line = line[:-1] # remove '\n'
                 _tag.append(line)
-                self.f_rgb.append(os.path.join(self.object_dir, folder, 'image_2', line+'.png'))
-                self.f_lidar.append(os.path.join(self.object_dir, folder, 'velodyne', line+'.bin'))
-                self.f_voxel.append(os.path.join(self.object_dir, folder, 'voxel', line+'.npz'))
-                self.f_label.append(os.path.join(self.object_dir, folder, 'label_2', line+'.txt'))
+                self.f_rgb.append(os.path.join(self.object_dir, 'image_2', line+'.png'))
+                self.f_lidar.append(os.path.join(self.object_dir, 'velodyne', line+'.bin'))
+                self.f_voxel.append(os.path.join(self.object_dir, 'voxel' if cfg.DETECT_OBJ == 'Car' else 'voxel_ped', line+'.npz'))
+                self.f_label.append(os.path.join(self.object_dir, 'label_2', line+'.txt'))
         else:
-            self.f_rgb = glob.glob(os.path.join(self.object_dir, folder, 'image_2', '*.png'))
+            self.f_rgb = glob.glob(os.path.join(self.object_dir, 'image_2', '*.png'))
             self.f_rgb.sort()
-            self.f_lidar = glob.glob(os.path.join(self.object_dir, folder, 'velodyne', '*.bin'))
+            self.f_lidar = glob.glob(os.path.join(self.object_dir, 'velodyne', '*.bin'))
             self.f_lidar.sort()
-            self.f_label = glob.glob(os.path.join(self.object_dir, folder, 'label_2', '*.txt'))
+            self.f_label = glob.glob(os.path.join(self.object_dir, 'label_2', '*.txt'))
             self.f_label.sort()
-            self.f_voxel = glob.glob(os.path.join(self.object_dir, folder, 'voxel', '*.npz'))
+            self.f_voxel = glob.glob(os.path.join(self.object_dir, 'voxel' if cfg.DETECT_OBJ == 'Car' else 'voxel_ped', '*.npz'))
             self.f_voxel.sort()
 
 
