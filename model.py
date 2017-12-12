@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 16时55分34秒
+# Last Modified : 2017年12月12日 星期二 17时30分16秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -41,8 +41,8 @@ class RPN3D(object):
         self.avail_gpus = avail_gpus
 
         # build graph
-        for dev in self.avail_gpus:
-            with tf.device('/gpu:{}'.format(dev)):
+        # for dev in self.avail_gpus:
+        #     with tf.device('/gpu:{}'.format(dev)):
 
         self.feature = FeatureNet(training=is_train, batch_size=batch_size)
         self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta, training=is_train)
@@ -248,6 +248,22 @@ class RPN3D(object):
             return tag, ret_box3d_score, ret_summary 
         
         return tag, ret_box3d_score 
+
+
+# def train(self, label, train=False, summary=False):
+#     # input:  
+#     #     (N) tag 
+#     #     (N, N') label
+#     #     vox_feature 
+#     #     vox_number 
+#     #     vox_coordinate
+#     from ipdb import set_trace; set_trace()
+#     pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, (cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH), cal_anchors())
+#     pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
+#     pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None) 
+#     neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None)
+
+
 
 if __name__ == '__main__':
     pass	
