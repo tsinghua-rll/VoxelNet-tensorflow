@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月13日 星期三 13时15分05秒
+# Last Modified : 2017年12月13日 星期三 16时53分05秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
