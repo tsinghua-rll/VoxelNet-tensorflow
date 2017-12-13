@@ -17,4 +17,4 @@ TBD
 # TODO
 
 - [X] nan and inf bugs fix
-- [ ] multicard support
+- [X] multicard support
