@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 19时05分04秒
+# Last Modified : 2017年12月13日 星期三 13时13分18秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -22,7 +22,7 @@ class RPN3D(object):
 
     def __init__(self,
             cls='Car',
-            batch_size=4,
+            single_batch_size=2, # batch_size_per_gpu
             learning_rate=0.001,
             max_gradient_norm=5.0,
             alpha=1.5,
@@ -31,7 +31,7 @@ class RPN3D(object):
             avail_gpus=['0']):
         # hyper parameters and status
         self.cls = cls 
-        self.batch_size = batch_size
+        self.single_batch_size = single_batch_size
         self.learning_rate = tf.Variable(float(learning_rate), trainable=False, dtype=tf.float32)
         self.global_step = tf.Variable(1, trainable=False)
         self.epoch = tf.Variable(0, trainable=False)
@@ -40,27 +40,70 @@ class RPN3D(object):
         self.beta = beta 
         self.avail_gpus = avail_gpus
 
-        # build graph
-        # for dev in self.avail_gpus:
-        #     with tf.device('/gpu:{}'.format(dev)):
+        lr = tf.train.exponential_decay(self.learning_rate, self.global_step, 10000, 0.96)
 
-        self.feature = FeatureNet(training=is_train, batch_size=batch_size)
-        self.rpn = MiddleAndRPN(input=self.feature.outputs, alpha=self.alpha, beta=self.beta, training=is_train)
-        self.feature_output = self.feature.outputs
-        self.delta_output = self.rpn.delta_output 
-        self.prob_output = self.rpn.prob_output 
-     
+        # build graph
         # input placeholders
-        self.vox_feature = self.feature.feature 
-        self.vox_number = self.feature.number 
-        self.vox_coordinate = self.feature.coordinate
-        self.targets = self.rpn.targets
-        self.pos_equal_one = self.rpn.pos_equal_one 
-        self.pos_equal_one_sum = self.rpn.pos_equal_one_sum
-        self.pos_equal_one_for_reg = self.rpn.pos_equal_one_for_reg
-        self.neg_equal_one = self.rpn.neg_equal_one 
-        self.neg_equal_one_sum = self.rpn.neg_equal_one_sum
-        self.rpn_output_shape = self.rpn.output_shape 
+        self.vox_feature = [] 
+        self.vox_number = []
+        self.vox_coordinate = [] 
+        self.targets = [] 
+        self.pos_equal_one = [] 
+        self.pos_equal_one_sum = [] 
+        self.pos_equal_one_for_reg = [] 
+        self.neg_equal_one = [] 
+        self.neg_equal_one_sum = []
+
+        self.delta_output = []
+        self.prob_output = []
+        self.opt = tf.train.AdamOptimizer(lr)
+        self.gradient_norm = []
+        self.tower_grads = []
+        with tf.variable_scope(tf.get_variable_scope()):
+            for idx, dev in enumerate(self.avail_gpus):
+                with tf.device('/gpu:{}'.format(dev)), tf.name_scope('gpu_{}'.format(dev)):
+                    # must use name scope here since we do not want to create new variables
+                    # graph
+                    feature = FeatureNet(training=is_train, batch_size=self.single_batch_size)
+                    rpn = MiddleAndRPN(input=feature.outputs, alpha=self.alpha, beta=self.beta, training=is_train)
+                    tf.get_variable_scope().reuse_variables()
+                    # input
+                    self.vox_feature.append(feature.feature)
+                    self.vox_number.append(feature.number)
+                    self.vox_coordinate.append(feature.coordinate)
+                    self.targets.append(rpn.targets)
+                    self.pos_equal_one.append(rpn.pos_equal_one)
+                    self.pos_equal_one_sum.append(rpn.pos_equal_one_sum)
+                    self.pos_equal_one_for_reg.append(rpn.pos_equal_one_for_reg)
+                    self.neg_equal_one.append(rpn.neg_equal_one)
+                    self.neg_equal_one_sum.append(rpn.neg_equal_one_sum)
+                    # output
+                    feature_output = feature.outputs
+                    delta_output = rpn.delta_output 
+                    prob_output = rpn.prob_output 
+                    # loss and grad
+                    self.loss = rpn.loss
+                    self.reg_loss = rpn.reg_loss
+                    self.cls_loss = rpn.cls_loss
+                    self.params = tf.trainable_variables()
+                    gradients = tf.gradients(self.loss, self.params)
+                    clipped_gradients, gradient_norm = tf.clip_by_global_norm(gradients, max_gradient_norm)
+
+                    self.delta_output.append(delta_output)
+                    self.prob_output.append(prob_output)
+                    self.tower_grads.append(clipped_gradients)
+                    self.gradient_norm.append(gradient_norm)
+                    self.rpn_output_shape = rpn.output_shape 
+
+        # loss and optimizer
+        # self.xxxloss is only the loss for the lowest tower
+        self.grads = average_gradients(self.tower_grads)
+        self.update = self.opt.apply_gradients(zip(self.grads, self.params), global_step=self.global_step)
+        self.gradient_norm = tf.group(*self.gradient_norm)
+
+        self.delta_output = tf.concat(self.delta_output, axis=0)
+        self.prob_output = tf.concat(self.prob_output, axis=0)
+
         self.anchors = cal_anchors()
         # for predict and image summary 
         self.rgb = tf.placeholder(tf.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
@@ -69,17 +112,8 @@ class RPN3D(object):
         self.boxes2d_scores = tf.placeholder(tf.float32, [None])
 
         # NMS(2D)
-        self.box2d_ind_after_nms = tf.image.non_max_suppression(self.boxes2d, self.boxes2d_scores, max_output_size=cfg.RPN_NMS_POST_TOPK, iou_threshold=cfg.RPN_NMS_THRESH)
-
-        # loss and optimizer
-        self.loss = self.rpn.loss
-        self.reg_loss = self.rpn.reg_loss 
-        self.cls_loss = self.rpn.cls_loss 
-        self.params = tf.trainable_variables()
-        opt = tf.train.AdamOptimizer(self.learning_rate)
-        gradients = tf.gradients(self.loss, self.params)
-        clipped_gradients, self.gradient_norm = tf.clip_by_global_norm(gradients, max_gradient_norm)
-        self.update = opt.apply_gradients(zip(clipped_gradients, self.params), global_step=self.global_step)
+        with tf.device('/gpu:{}'.format(self.avail_gpus[0])):
+            self.box2d_ind_after_nms = tf.image.non_max_suppression(self.boxes2d, self.boxes2d_scores, max_output_size=cfg.RPN_NMS_POST_TOPK, iou_threshold=cfg.RPN_NMS_THRESH)
     
         # summary and saver
         self.saver = tf.train.Saver(write_version=tf.train.SaverDef.V2, 
@@ -118,28 +152,30 @@ class RPN3D(object):
         vox_feature = data[2]
         vox_number = data[3]
         vox_coordinate = data[4]
-        print(tag)
+        print('train', tag)
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, self.rpn_output_shape, self.anchors)
         pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
         pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None) 
         neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None)
-        input_feed = {
-            self.vox_feature: vox_feature,
-            self.vox_number: vox_number,  
-            self.vox_coordinate: vox_coordinate,
-            self.targets: targets, 
-            self.pos_equal_one: pos_equal_one,
-            self.pos_equal_one_sum: pos_equal_one_sum,
-            self.pos_equal_one_for_reg: pos_equal_one_for_reg,
-            self.neg_equal_one: neg_equal_one,
-            self.neg_equal_one_sum: neg_equal_one_sum
-        }
+        
+        input_feed = {}
+        for idx in range(len(self.avail_gpus)):
+            input_feed[self.vox_feature[idx]] = vox_feature[idx]
+            input_feed[self.vox_number[idx]] = vox_number[idx]
+            input_feed[self.vox_coordinate[idx]] = vox_coordinate[idx]
+            input_feed[self.targets[idx]] = targets[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.pos_equal_one[idx]] = pos_equal_one[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.pos_equal_one_sum[idx]] = pos_equal_one_sum[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.pos_equal_one_for_reg[idx]] = pos_equal_one_for_reg[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.neg_equal_one[idx]] = neg_equal_one[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.neg_equal_one_sum[idx]] = neg_equal_one_sum[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
         if train:
             output_feed = [self.loss, self.reg_loss, self.cls_loss, self.gradient_norm, self.update]
         else:
             output_feed = [self.loss, self.reg_loss, self.cls_loss]
         if summary:
             output_feed.append(self.train_summary)
+        # TODO: multi-gpu support for test and predict step
         return session.run(output_feed, input_feed)
 
 
@@ -155,22 +191,24 @@ class RPN3D(object):
         vox_feature = data[2]
         vox_number = data[3]
         vox_coordinate = data[4]
-
+        print('valid', tag)
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, self.rpn_output_shape, self.anchors)
         pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
         pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None) 
         neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None)
-        input_feed = {
-            self.vox_feature: vox_feature,
-            self.vox_number: vox_number,  
-            self.vox_coordinate: vox_coordinate,
-            self.targets: targets, 
-            self.pos_equal_one: pos_equal_one,
-            self.pos_equal_one_sum: pos_equal_one_sum,
-            self.pos_equal_one_for_reg: pos_equal_one_for_reg,
-            self.neg_equal_one: neg_equal_one, 
-            self.neg_equal_one_sum: neg_equal_one_sum
-        }
+        
+        input_feed = {}
+        for idx in range(len(self.avail_gpus)):
+            input_feed[self.vox_feature[idx]] = vox_feature[idx]
+            input_feed[self.vox_number[idx]] = vox_number[idx]
+            input_feed[self.vox_coordinate[idx]] = vox_coordinate[idx]
+            input_feed[self.targets[idx]] = targets[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.pos_equal_one[idx]] = pos_equal_one[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.pos_equal_one_sum[idx]] = pos_equal_one_sum[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.pos_equal_one_for_reg[idx]] = pos_equal_one_for_reg[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.neg_equal_one[idx]] = neg_equal_one[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+            input_feed[self.neg_equal_one_sum[idx]] = neg_equal_one_sum[idx*self.single_batch_size:(idx+1)*self.single_batch_size]
+
         output_feed = [self.loss, self.reg_loss, self.cls_loss]
         if summary:
             output_feed.append(self.validate_summary)
@@ -199,22 +237,23 @@ class RPN3D(object):
         lidar = data[6]
 
         batch_gt_boxes3d = label_to_gt_box3d(label, cls=self.cls, coordinate='lidar')
-        input_feed = {
-            self.vox_feature: vox_feature,
-            self.vox_number: vox_number,  
-            self.vox_coordinate: vox_coordinate,
-        }
+        print('predict', tag)
+        input_feed = {}
+        for idx in range(len(self.avail_gpus)):
+            input_feed[self.vox_feature[idx]] = vox_feature[idx]
+            input_feed[self.vox_number[idx]] = vox_number[idx]
+            input_feed[self.vox_coordinate[idx]] = vox_coordinate[idx]
 
         output_feed = [self.prob_output, self.delta_output]
         probs, deltas = session.run(output_feed, input_feed)
         # BOTTLENECK
         batch_boxes3d = delta_to_boxes3d(deltas, self.anchors, coordinate='lidar')
         batch_boxes2d = batch_boxes3d[:, :, [0,1,4,5,6]]
-        batch_probs = probs.reshape((self.batch_size, -1))
+        batch_probs = probs.reshape((len(self.avail_gpus) * self.single_batch_size, -1))
         # NMS 
         ret_box3d = []
         ret_score = []
-        for batch_id in range(self.batch_size):
+        for batch_id in range(len(self.avail_gpus)*self.single_batch_size):
             # BOTTLENECK
             # TODO: if possible, use rotate NMS
             boxes2d = corner_to_standup_box2d(center_to_corner_box2d(batch_boxes2d[batch_id]))
@@ -250,18 +289,30 @@ class RPN3D(object):
         return tag, ret_box3d_score 
 
 
-# def train(self, label, train=False, summary=False):
-#     # input:  
-#     #     (N) tag 
-#     #     (N, N') label
-#     #     vox_feature 
-#     #     vox_number 
-#     #     vox_coordinate
-#     from ipdb import set_trace; set_trace()
-#     pos_equal_one, neg_equal_one, targets = cal_rpn_target(label, (cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH), cal_anchors())
-#     pos_equal_one_for_reg = np.concatenate([np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
-#     pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None) 
-#     neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis=(1,2,3)).reshape(-1,1,1,1), a_min=1, a_max=None)
+def average_gradients(tower_grads):
+    # ref:  
+    # https://github.com/tensorflow/models/blob/6db9f0282e2ab12795628de6200670892a8ad6ba/tutorials/image/cifar10/cifar10_multi_gpu_train.py#L103
+    # but only contains grads, no vars
+    average_grads = []
+    for grad_and_vars in zip(*tower_grads):
+        grads = []
+        for g in grad_and_vars:
+            # Add 0 dimension to the gradients to represent the tower.
+            expanded_g = tf.expand_dims(g, 0)
+
+            # Append on a 'tower' dimension which we will average over below.
+            grads.append(expanded_g)
+
+        # Average over the 'tower' dimension.
+        grad = tf.concat(axis=0, values=grads)
+        grad = tf.reduce_mean(grad, 0)
+
+        # Keep in mind that the Variables are redundant because they are shared
+        # across towers. So .. we will just return the first tower's pointer to
+        # the Variable.
+        grad_and_var = grad
+        average_grads.append(grad_and_var)
+    return average_grads
 
 
 
