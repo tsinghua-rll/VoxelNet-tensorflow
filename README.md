@@ -6,7 +6,7 @@ An tensorflow inplementation for [voxelnet](https://arxiv.org/abs/1711.06396)
 
 1. run `preprocess.py` for pointcloud preprocess(attention to use correct path)
 2. run `train.py`
-3. launch a tensorboard and wait for it
+3. launch a tensorboard and wait for the training process
 
 # Result
 
@@ -15,4 +15,4 @@ TBD
 # TODO
 
 - [X] nan and inf bugs fix
-- [] multicard support
+- [ ] multicard support
