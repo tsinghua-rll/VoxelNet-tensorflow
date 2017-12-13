@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 19时54分48秒
+# Last Modified : 2017年12月13日 星期三 10时17分19秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
