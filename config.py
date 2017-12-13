@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 16时57分08秒
+# Last Modified : 2017年12月13日 星期三 13时04分20秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -24,8 +24,8 @@ __C = edict()
 cfg = __C
 
 # for gpu allocation
-__C.GPU_AVAILABLE='0,2,3'
-__C.GPU_USE_COUNT=3
+__C.GPU_AVAILABLE='0,2,3,1'
+__C.GPU_USE_COUNT=len(__C.GPU_AVAILABLE.split(','))
 __C.GPU_MEMORY_FRACTION=1
 
 # selected object 

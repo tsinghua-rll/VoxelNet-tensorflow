@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 15时11分08秒
+# Last Modified : 2017年12月12日 星期二 21时26分43秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -33,7 +33,7 @@ class KittiLoader(object):
     # vox_number 
     # vox_coordinate 
 
-    def __init__(self, object_dir='.', queue_size=20, require_shuffle=False, is_testset=True, batch_size=1, use_multi_process_num=0, split_file=''):
+    def __init__(self, object_dir='.', queue_size=20, require_shuffle=False, is_testset=True, batch_size=1, use_multi_process_num=0, split_file='', multi_gpu_sum=1):
         assert(use_multi_process_num >= 0)
         self.object_dir = object_dir
         self.is_testset = is_testset
@@ -41,6 +41,7 @@ class KittiLoader(object):
         self.require_shuffle = require_shuffle if not self.is_testset else False
         self.batch_size=batch_size if not self.is_testset else 1
         self.split_file = split_file 
+        self.multi_gpu_sum = multi_gpu_sum
 
         if self.split_file != '':
             # use split file  
@@ -130,7 +131,15 @@ class KittiLoader(object):
                 else:
                     self.work_exit.value = True
         
-        _, vox_feature, vox_number, vox_coordinate = build_input(voxel)
+        # only for voxel -> [gpu, k_single_batch, ...]
+        vox_feature, vox_number, vox_coordinate = [], [], []
+        single_batch_size = int(self.batch_size/self.multi_gpu_sum)
+        for idx in range(self.multi_gpu_sum):
+            _, per_vox_feature, per_vox_number, per_vox_coordinate = build_input(voxel[idx*single_batch_size:(idx+1)*single_batch_size])
+            vox_feature.append(per_vox_feature)
+            vox_number.append(per_vox_number)
+            vox_coordinate.append(per_vox_coordinate)
+
         self.dataset_queue.put_nowait((labels, (vox_feature, vox_number, vox_coordinate), rgb, raw_lidar, tag))
 
     def load(self):

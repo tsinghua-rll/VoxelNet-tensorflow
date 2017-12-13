@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月12日 星期二 16时17分56秒
+# Last Modified : 2017年12月13日 星期三 10时21分32秒
 # Created By : Wei Zhang
 
 import os
@@ -20,9 +20,9 @@ class VFELayer(object):
     def __init__(self, out_channels, name):
         super(VFELayer, self).__init__()
         self.units = out_channels / 2
-        with tf.name_scope(name):
-            self.dense = tf.layers.Dense(self.units, tf.nn.relu, name='dense')
-            self.batch_norm = tf.layers.BatchNormalization(name='batch_norm', fused=True)
+        with tf.variable_scope(name, reuse=tf.AUTO_REUSE) as scope:
+            self.dense = tf.layers.Dense(self.units, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
+            self.batch_norm = tf.layers.BatchNormalization(name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
 
     def apply(self, inputs, training):
         pointwise = self.batch_norm.apply(self.dense.apply(inputs), training)
@@ -38,7 +38,7 @@ class VFELayer(object):
 
 class FeatureNet(object):
 
-    def __init__(self, training, batch_size):
+    def __init__(self, training, batch_size, name=''):
         super(FeatureNet, self).__init__()
         self.training = training
 
@@ -53,10 +53,11 @@ class FeatureNet(object):
         self.coordinate = tf.placeholder(
             tf.int64, [None, 4], name='coordinate')
 
-        self.vfe1 = VFELayer(32, 'VFE-1')
-        self.vfe2 = VFELayer(128, 'VFE-2')
-        self.dense = tf.layers.Dense(128, tf.nn.relu, name='dense')
-        self.batch_norm = tf.layers.BatchNormalization(name='batch_norm', fused=True)
+        with tf.variable_scope(name, reuse=tf.AUTO_REUSE) as scope:
+            self.vfe1 = VFELayer(32, 'VFE-1')
+            self.vfe2 = VFELayer(128, 'VFE-2')
+            self.dense = tf.layers.Dense(128, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
+            self.batch_norm = tf.layers.BatchNormalization(name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
 
         def compute(packed):
             # feature: [35/45, 7], number: scalar
