@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月13日 星期三 13时18分20秒
+# Last Modified : 2017年12月14日 星期四 02时39分18秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     dataset_dir = './data/object'
 
-    with tf.Graph().as_default(), tf.device('/cpu:0'):
+    with tf.Graph().as_default():
         with KittiLoader(object_dir=dataset_dir, queue_size=100, require_shuffle=False, is_testset=True, batch_size=args.single_batch_size*cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as test_loader:
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION, 
                 visible_device_list=cfg.GPU_AVAILABLE,

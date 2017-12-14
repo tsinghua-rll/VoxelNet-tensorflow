@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 17时25分45秒
+# Last Modified : 2017年12月13日 星期三 20时12分49秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -17,10 +17,9 @@ from config import cfg
 from box_overlaps import *
 
  
-def lidar_to_bird_view(x, y):
+def lidar_to_bird_view(x, y, factor=1):
     #using the cfg.INPUT_XXX 
-    return (x - cfg.X_MIN) / cfg.VOXEL_X_SIZE, (y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE
-
+    return (x - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor, (y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor
 
  
 def camera_to_lidar(x, y, z):
@@ -257,20 +256,21 @@ def lidar_box3d_to_camera_box(boxes3d, cal_projection=False):
 
 
  
-def lidar_to_bird_view_img(lidar):
+def lidar_to_bird_view_img(lidar, factor=1):
     # Input:
     #   lidar: (N', 4)
     # Output:
     #   birdview: (w, l, 3)
-    birdview = np.zeros((cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 1))
+    birdview = np.zeros((cfg.INPUT_HEIGHT*factor, cfg.INPUT_WIDTH*factor, 1))
     for point in lidar:
         x, y = point[0:2]
         if cfg.X_MIN < x < cfg.X_MAX and cfg.Y_MIN < y < cfg.Y_MAX:
-            x, y = int((x - cfg.X_MIN) / cfg.VOXEL_X_SIZE), int((y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE)
+            x, y = int((x - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor), int((y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor)
             birdview[y, x] += 1
     birdview = birdview - np.min(birdview)
     divisor = np.max(birdview) - np.min(birdview)
-    birdview = (birdview/divisor*255)
+    # TODO: adjust this factor
+    birdview = np.clip((birdview/divisor*255)*5*factor, a_min=0, a_max=255)
     birdview = np.tile(birdview, 3).astype(np.uint8)
 
     return birdview 
@@ -317,7 +317,7 @@ def draw_lidar_box3d_on_image(img, boxes3d, scores, gt_boxes3d=np.array([]),
 
  
 def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array([]), 
-        color=(255,255,0), gt_color=(255,0,255), thickness=1):
+        color=(255,255,0), gt_color=(255,0,255), thickness=1, factor=1):
     # Input:
     #   birdview: (h, w, 3)
     #   boxes3d (N, 7) [x, y, z, h, w, l, r]
@@ -328,10 +328,10 @@ def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array(
     corner_gt_boxes3d = center_to_corner_box3d(gt_boxes3d)
     # draw gt 
     for box in corner_gt_boxes3d:
-        x0, y0 = lidar_to_bird_view(*box[0, 0:2])
-        x1, y1 = lidar_to_bird_view(*box[1, 0:2])
-        x2, y2 = lidar_to_bird_view(*box[2, 0:2])
-        x3, y3 = lidar_to_bird_view(*box[3, 0:2])
+        x0, y0 = lidar_to_bird_view(*box[0, 0:2], factor=factor)
+        x1, y1 = lidar_to_bird_view(*box[1, 0:2], factor=factor)
+        x2, y2 = lidar_to_bird_view(*box[2, 0:2], factor=factor)
+        x3, y3 = lidar_to_bird_view(*box[3, 0:2], factor=factor)
         
         cv2.line(img, (int(x0), int(y0)), (int(x1), int(y1)), gt_color, thickness, cv2.LINE_AA)
         cv2.line(img, (int(x1), int(y1)), (int(x2), int(y2)), gt_color, thickness, cv2.LINE_AA)
@@ -340,10 +340,10 @@ def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array(
 
     # draw detections 
     for box in corner_boxes3d:
-        x0, y0 = lidar_to_bird_view(*box[0, 0:2])
-        x1, y1 = lidar_to_bird_view(*box[1, 0:2])
-        x2, y2 = lidar_to_bird_view(*box[2, 0:2])
-        x3, y3 = lidar_to_bird_view(*box[3, 0:2])
+        x0, y0 = lidar_to_bird_view(*box[0, 0:2], factor=factor)
+        x1, y1 = lidar_to_bird_view(*box[1, 0:2], factor=factor)
+        x2, y2 = lidar_to_bird_view(*box[2, 0:2], factor=factor)
+        x3, y3 = lidar_to_bird_view(*box[3, 0:2], factor=factor)
         
         cv2.line(img, (int(x0), int(y0)), (int(x1), int(y1)), color, thickness, cv2.LINE_AA)
         cv2.line(img, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness, cv2.LINE_AA)

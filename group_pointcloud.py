@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月13日 星期三 10时21分32秒
+# Last Modified : 2017年12月14日 星期四 02时21分30秒
 # Created By : Wei Zhang
 
 import os
@@ -76,7 +76,7 @@ class FeatureNet(object):
             compute,
             (self.feature, self.number),
             dtype=tf.float32,
-            parallel_iterations=32,
+            parallel_iterations=1024,
             swap_memory=True)
 
         # car: [N * 10 * 400 * 352 * 128]

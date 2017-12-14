@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月13日 星期三 13时13分18秒
+# Last Modified : 2017年12月14日 星期四 02时39分46秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -97,9 +97,10 @@ class RPN3D(object):
 
         # loss and optimizer
         # self.xxxloss is only the loss for the lowest tower
-        self.grads = average_gradients(self.tower_grads)
-        self.update = self.opt.apply_gradients(zip(self.grads, self.params), global_step=self.global_step)
-        self.gradient_norm = tf.group(*self.gradient_norm)
+        with tf.device('/gpu:{}'.format(self.avail_gpus[0])):
+            self.grads = average_gradients(self.tower_grads)
+            self.update = self.opt.apply_gradients(zip(self.grads, self.params), global_step=self.global_step)
+            self.gradient_norm = tf.group(*self.gradient_norm)
 
         self.delta_output = tf.concat(self.delta_output, axis=0)
         self.prob_output = tf.concat(self.prob_output, axis=0)
@@ -107,7 +108,7 @@ class RPN3D(object):
         self.anchors = cal_anchors()
         # for predict and image summary 
         self.rgb = tf.placeholder(tf.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
-        self.bv = tf.placeholder(tf.uint8, [None, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 3])
+        self.bv = tf.placeholder(tf.uint8, [None, cfg.BV_LOG_FACTOR*cfg.INPUT_HEIGHT, cfg.BV_LOG_FACTOR*cfg.INPUT_WIDTH, 3])
         self.boxes2d = tf.placeholder(tf.float32, [None, 4])
         self.boxes2d_scores = tf.placeholder(tf.float32, [None])
 
@@ -276,9 +277,9 @@ class RPN3D(object):
             # only summry 1 in a batch 
             front_image = draw_lidar_box3d_on_image(img[0], ret_box3d[0], ret_score[0], 
                     batch_gt_boxes3d[0])
-            bird_view = lidar_to_bird_view_img(lidar[0])
+            bird_view = lidar_to_bird_view_img(lidar[0], factor=cfg.BV_LOG_FACTOR)
             bird_view = draw_lidar_box3d_on_birdview(bird_view, ret_box3d[0], ret_score[0], 
-                    batch_gt_boxes3d[0])
+                    batch_gt_boxes3d[0], factor=cfg.BV_LOG_FACTOR)
             ret_summary = session.run(self.predict_summary, {
                 self.rgb: front_image[np.newaxis, ...],
                 self.bv: bird_view[np.newaxis, ...]

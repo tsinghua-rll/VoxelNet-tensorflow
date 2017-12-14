@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月13日 星期三 13时04分20秒
+# Last Modified : 2017年12月14日 星期四 00时59分53秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -24,7 +24,7 @@ __C = edict()
 cfg = __C
 
 # for gpu allocation
-__C.GPU_AVAILABLE='0,2,3,1'
+__C.GPU_AVAILABLE='3,1,2,0'
 __C.GPU_USE_COUNT=len(__C.GPU_AVAILABLE.split(','))
 __C.GPU_MEMORY_FRACTION=1
 
@@ -57,6 +57,8 @@ else:
     __C.FEATURE_WIDTH=int(__C.INPUT_WIDTH/__C.FEATURE_RATIO)
     __C.FEATURE_HEIGHT=int(__C.INPUT_HEIGHT/__C.FEATURE_RATIO)
 
+# set the log image scale factor
+__C.BV_LOG_FACTOR=8
 
 # for data set type
 __C.DATA_SETS_TYPE='kitti'
@@ -166,8 +168,8 @@ if __C.DETECT_OBJ == 'Cyclist':
 
 ## for rpn nms
 __C.RPN_NMS_POST_TOPK=100
-__C.RPN_NMS_THRESH=0.7
-__C.RPN_SCORE_THRESH=0.6
+__C.RPN_NMS_THRESH=0.5
+__C.RPN_SCORE_THRESH=0.8
 
 
 # utils

@@ -4,20 +4,21 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月13日 星期三 16时53分05秒
+# Last Modified : 2017年12月14日 星期四 02时33分20秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
 import argparse
 import os
 import time
+import sys
 import tensorflow as tf
 from itertools import count
 
 from config import cfg
 from model import RPN3D
 from kitti_loader import KittiLoader
-
+from train_hook import check_if_should_pause
 
 parser = argparse.ArgumentParser(description='training')
 parser.add_argument('-i', '--max-epoch', type=int, nargs='?', default=10,
@@ -35,12 +36,11 @@ log_dir = os.path.join('./log', args.tag)
 save_model_dir = os.path.join('./save_model', args.tag)
 os.makedirs(log_dir, exist_ok=True)
 os.makedirs(save_model_dir, exist_ok=True)
-save_model_dir = os.path.join('./save_model', args.tag, 'checkpoint')
 
 
 def main(_):
     # TODO: split file support
-    with tf.Graph().as_default(), tf.device('/cpu:0'):
+    with tf.Graph().as_default():
         global save_model_dir
         with KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True, 
                 is_testset=False, batch_size=args.single_batch_size*cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as train_loader, \
@@ -55,7 +55,7 @@ def main(_):
                 device_count={
                     "GPU" : cfg.GPU_USE_COUNT,  
                 },
-                allow_soft_placement=True,
+                allow_soft_placement=True
             )
             with tf.Session(config=config) as sess:
                 model = RPN3D(
@@ -94,7 +94,7 @@ def main(_):
                     if not iter % summary_image_interval:
                         is_summary_image = True 
                     if not iter % save_model_interval:
-                        model.saver.save(sess, save_model_dir, global_step=model.global_step)
+                        model.saver.save(sess, os.path.join(save_model_dir, 'checkpoint'), global_step=model.global_step)
                     if not iter % validate_interval:
                         is_validate = True
                     if not iter % iter_per_epoch:
@@ -116,10 +116,15 @@ def main(_):
                         ret = model.validate_step(sess, valid_loader.load(), summary=True)
                         summary_writer.add_summary(ret[-1], iter)
                     
+                    if check_if_should_pause(args.tag):
+                        model.saver.save(sess, os.path.join(save_model_dir, 'checkpoint'), global_step=model.global_step)
+                        print('pause and save model @ {} steps:{}'.format(save_model_dir, model.global_step.eval()))
+                        sys.exit(0)
+
                 print('train done. total epoch:{} iter:{}'.format(model.epoch.eval(), model.global_step.eval()))
                 
                 # finallly save model
-                model.saver.save(sess, save_model_dir, global_step=model.global_step)
+                model.saver.save(sess, os.path.join(save_model_dir, 'checkpoint'), global_step=model.global_step)
 
 if __name__ == '__main__':
     tf.app.run(main)
