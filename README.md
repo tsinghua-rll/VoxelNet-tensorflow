@@ -18,3 +18,7 @@ TBD
 
 - [X] nan and inf bugs fix
 - [X] multicard support
+
+# Acknowledgement
+
+Thanks to [@ring00](https://github.com/ring00) for the implementation of VFE layer and **Jialin Zhao** for the implementation of the RPN
