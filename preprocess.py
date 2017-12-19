@@ -11,7 +11,7 @@ import os
 import multiprocessing
 import numpy as np
 
-from config import cfg 
+from config import cfg
 
 if cfg.DETECT_OBJ == 'Car':
     scene_size = np.array([4, 80, 70.4], dtype=np.float32)
@@ -29,6 +29,7 @@ else:
     data_dir = 'velodyne'
     output_dir = 'voxel_ped'
     max_point_number = 45
+
 
 def worker(filelist):
     for file in filelist:

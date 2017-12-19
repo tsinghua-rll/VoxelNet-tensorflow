@@ -21,8 +21,10 @@ class VFELayer(object):
         super(VFELayer, self).__init__()
         self.units = out_channels / 2
         with tf.variable_scope(name, reuse=tf.AUTO_REUSE) as scope:
-            self.dense = tf.layers.Dense(self.units, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
-            self.batch_norm = tf.layers.BatchNormalization(name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
+            self.dense = tf.layers.Dense(
+                self.units, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
+            self.batch_norm = tf.layers.BatchNormalization(
+                name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
 
     def apply(self, inputs, training):
         pointwise = self.batch_norm.apply(self.dense.apply(inputs), training)
@@ -43,7 +45,7 @@ class FeatureNet(object):
         self.training = training
 
         # scalar
-        self.batch_size = batch_size 
+        self.batch_size = batch_size
         # [ΣK, 35/45, 7]
         self.feature = tf.placeholder(
             tf.float32, [None, cfg.VOXEL_POINT_COUNT, 7], name='feature')
@@ -56,8 +58,10 @@ class FeatureNet(object):
         with tf.variable_scope(name, reuse=tf.AUTO_REUSE) as scope:
             self.vfe1 = VFELayer(32, 'VFE-1')
             self.vfe2 = VFELayer(128, 'VFE-2')
-            self.dense = tf.layers.Dense(128, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
-            self.batch_norm = tf.layers.BatchNormalization(name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
+            self.dense = tf.layers.Dense(
+                128, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
+            self.batch_norm = tf.layers.BatchNormalization(
+                name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
 
         def compute(packed):
             # feature: [35/45, 7], number: scalar
@@ -163,11 +167,11 @@ def main():
 
     filelist = [f for f in os.listdir(data_dir) if f.endswith('npz')]
 
-    import time 
+    import time
     voxel_dict_list = []
     for id in range(0, len(filelist), batch_size):
         pre_time = time.time()
-        batch_file = [f for f in filelist[id:id+batch_size]]
+        batch_file = [f for f in filelist[id:id + batch_size]]
         voxel_dict_list = []
         for file in batch_file:
             voxel_dict_list.append(np.load(os.path.join(data_dir, file)))
@@ -181,4 +185,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

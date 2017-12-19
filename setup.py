@@ -12,6 +12,6 @@ from distutils.core import setup
 from Cython.Build import cythonize
 
 setup(
-    name = 'box overlaps',
-    ext_modules = cythonize('box_overlaps.pyx')
+    name='box overlaps',
+    ext_modules=cythonize('box_overlaps.pyx')
 )
