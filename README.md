@@ -4,8 +4,11 @@ A tensorflow inplementation for [voxelnet](https://arxiv.org/abs/1711.06396)
 
 # Usage
 
-0. have a look at `config.py` for model configurations
+0. have a look at `config.py` for model configurations, and make sure that you are using `Python3.5+`
 1. run `setup.py` to build the Cython module
+```bash
+$ python setup.py build_ext --inplace
+```
 2. run `preprocess.py` for pointcloud preprocess(attention to use correct path)
 3. run `train.py`
 4. launch a tensorboard and wait for the training process
