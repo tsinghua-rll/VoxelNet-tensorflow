@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月21日 星期四 17时36分53秒
+# Last Modified : Thu 21 Dec 2017 09:06:04 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -17,7 +17,7 @@ from itertools import count
 
 from config import cfg
 from model import RPN3D
-from kitti_loader import KittiLoader
+from utils.kitti_loader import KittiLoader
 from train_hook import check_if_should_pause
 
 parser = argparse.ArgumentParser(description='training')
@@ -49,7 +49,7 @@ def main(_):
 
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION,
                                         visible_device_list=cfg.GPU_AVAILABLE,
-                                        allow_growth=False)
+                                        allow_growth=True)
             config = tf.ConfigProto(
                 gpu_options=gpu_options,
                 device_count={
@@ -115,7 +115,7 @@ def main(_):
 
                     if is_summary_image:
                         ret = model.predict_step(
-                            sess, train_loader.load(), summary=True)
+                            sess, valid_loader.load(), summary=True)
                         summary_writer.add_summary(ret[-1], iter)
 
                     if is_validate:

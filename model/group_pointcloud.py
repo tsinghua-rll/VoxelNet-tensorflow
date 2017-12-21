@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月21日 星期四 17时34分32秒
+# Last Modified : Thu 21 Dec 2017 07:48:05 PM CST
 # Created By : Wei Zhang
 
 import os
@@ -26,11 +26,11 @@ class VFELayer(object):
             self.batch_norm = tf.layers.BatchNormalization(
                 name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
 
-    def apply(self, inputs, training):
+    def apply(self, inputs, mask, training):
         # [K, T, 7] tensordot [7, units] = [K, T, units]
         pointwise = self.batch_norm.apply(self.dense.apply(inputs), training)
 
-        # [K, 1, units]
+        #n [K, 1, units]
         aggregated = tf.reduce_max(pointwise, axis=1, keep_dims=True)
 
         # [K, T, units]
@@ -39,15 +39,8 @@ class VFELayer(object):
         # [K, T, 2 * units]
         concatenated = tf.concat([pointwise, repeated], axis=2)
 
-        # [K, T, 1]
-        reduced = tf.reduce_max(inputs, axis=2, keep_dims=True)
+        mask = tf.tile(mask, [1, 1, 2 * self.units])
 
-        # boolean mask [K, T, 2 * units]
-        mask = tf.tile(
-            tf.not_equal(reduced, tf.constant(0.0)), [1, 1, 2 * self.units])
-
-        # reset the features corresponding to empty points to zero
-        # TODO: more percise implementation
         concatenated = tf.multiply(concatenated, tf.cast(mask, tf.float32))
 
         return concatenated
@@ -77,9 +70,10 @@ class FeatureNet(object):
                 128, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
             self.batch_norm = tf.layers.BatchNormalization(
                 name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
-
-        x = self.vfe1.apply(self.feature, self.training)
-        x = self.vfe2.apply(x, self.training)
+        # boolean mask [K, T, 2 * units]
+        mask = tf.not_equal(tf.reduce_max(self.feature, axis=2, keep_dims=True), 0)
+        x = self.vfe1.apply(self.feature, mask, self.training)
+        x = self.vfe2.apply(x, mask, self.training)
         x = self.dense.apply(x)
         x = self.batch_norm.apply(x, self.training)
 

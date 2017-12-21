@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月21日 星期四 00时44分02秒
+# Last Modified : Thu 21 Dec 2017 07:48:49 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -15,7 +15,6 @@ import tensorflow as tf
 
 from model import RPN3D
 from config import cfg
-from kitti_loader import KittiLoader
 from utils import *
 
 

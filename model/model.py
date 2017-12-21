@@ -4,18 +4,19 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月21日 星期四 00时42分33秒
+# Last Modified : Thu 21 Dec 2017 09:07:10 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
 import os
 import tensorflow as tf
+import cv2
 from numba import jit
 
 from config import cfg
 from utils import *
-from group_pointcloud import FeatureNet
-from rpn import MiddleAndRPN
+from model.group_pointcloud import FeatureNet
+from model.rpn import MiddleAndRPN
 
 
 class RPN3D(object):
@@ -118,6 +119,8 @@ class RPN3D(object):
             tf.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
         self.bv = tf.placeholder(tf.uint8, [
                                  None, cfg.BV_LOG_FACTOR * cfg.INPUT_HEIGHT, cfg.BV_LOG_FACTOR * cfg.INPUT_WIDTH, 3])
+        self.bv_heatmap = tf.placeholder(tf.uint8, [
+                                 None, cfg.BV_LOG_FACTOR * cfg.FEATURE_HEIGHT, cfg.BV_LOG_FACTOR * cfg.FEATURE_WIDTH, 3])
         self.boxes2d = tf.placeholder(tf.float32, [None, 4])
         self.boxes2d_scores = tf.placeholder(tf.float32, [None])
 
@@ -147,6 +150,7 @@ class RPN3D(object):
 
         self.predict_summary = tf.summary.merge([
             tf.summary.image('predict/bird_view_lidar', self.bv),
+            tf.summary.image('predict/bird_view_heatmap', self.bv_heatmap),
             tf.summary.image('predict/front_view_rgb', self.rgb),
         ])
 
@@ -317,9 +321,11 @@ class RPN3D(object):
                 lidar[0], factor=cfg.BV_LOG_FACTOR)
             bird_view = draw_lidar_box3d_on_birdview(bird_view, ret_box3d[0], ret_score[0],
                                                      batch_gt_boxes3d[0], factor=cfg.BV_LOG_FACTOR)
+            heatmap = colorize(probs[0, ...], cfg.BV_LOG_FACTOR)
             ret_summary = session.run(self.predict_summary, {
                 self.rgb: front_image[np.newaxis, ...],
-                self.bv: bird_view[np.newaxis, ...]
+                self.bv: bird_view[np.newaxis, ...],
+                self.bv_heatmap: heatmap[np.newaxis, ...]
             })
 
             return tag, ret_box3d_score, ret_summary

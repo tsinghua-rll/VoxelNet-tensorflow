@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月20日 星期三 23时16分57秒
+# Last Modified : Thu 21 Dec 2017 07:46:05 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2

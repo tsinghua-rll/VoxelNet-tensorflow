@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月21日 星期四 10时37分46秒
+# Last Modified : Thu 21 Dec 2017 07:47:18 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -14,7 +14,7 @@ import shapely.affinity
 from numba import jit
 
 from config import cfg
-from box_overlaps import *
+from utils.box_overlaps import *
 
 
 def lidar_to_bird_view(x, y, factor=1):
