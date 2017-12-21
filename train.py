@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月21日 星期四 10时40分44秒
+# Last Modified : 2017年12月21日 星期四 17时36分53秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -113,8 +113,7 @@ def main(_):
                     if is_summary:
                         summary_writer.add_summary(ret[-1], iter)
 
-                    # if is_summary_image:
-                    if True:
+                    if is_summary_image:
                         ret = model.predict_step(
                             sess, train_loader.load(), summary=True)
                         summary_writer.add_summary(ret[-1], iter)

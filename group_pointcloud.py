@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : 2017年12月14日 星期四 02时21分30秒
+# Last Modified : 2017年12月21日 星期四 17时34分32秒
 # Created By : Wei Zhang
 
 import os
@@ -19,7 +19,7 @@ class VFELayer(object):
 
     def __init__(self, out_channels, name):
         super(VFELayer, self).__init__()
-        self.units = out_channels / 2
+        self.units = int(out_channels / 2)
         with tf.variable_scope(name, reuse=tf.AUTO_REUSE) as scope:
             self.dense = tf.layers.Dense(
                 self.units, tf.nn.relu, name='dense', _reuse=tf.AUTO_REUSE, _scope=scope)
