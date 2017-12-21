@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月14日 星期四 02时39分46秒
+# Last Modified : 2017年12月21日 星期四 00时42分33秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -288,17 +288,21 @@ class RPN3D(object):
         for batch_id in range(len(self.avail_gpus) * self.single_batch_size):
             # BOTTLENECK
             # TODO: if possible, use rotate NMS
+            ind = np.where(batch_probs[batch_id, :] >= cfg.RPN_SCORE_THRESH)[0]
+            tmp_boxes3d = batch_boxes3d[batch_id, ind, ...]
+            tmp_boxes2d = batch_boxes2d[batch_id, ind, ...]
+            tmp_scores = batch_probs[batch_id, ind]
+
             boxes2d = corner_to_standup_box2d(
-                center_to_corner_box2d(batch_boxes2d[batch_id]))
+                center_to_corner_box2d(tmp_boxes2d))
             ind = session.run(self.box2d_ind_after_nms, {
                 self.boxes2d: boxes2d,
-                self.boxes2d_scores: batch_probs[batch_id]
+                self.boxes2d_scores: tmp_scores
             })
-            tmp_boxes3d = batch_boxes3d[batch_id, ind, ...]
-            tmp_scores = batch_probs[batch_id, ind]
-            ind = np.where(tmp_scores >= cfg.RPN_SCORE_THRESH)[0]
-            ret_box3d.append(tmp_boxes3d[ind, ...])
-            ret_score.append(tmp_scores[ind])
+            tmp_boxes3d = tmp_boxes3d[ind, ...]
+            tmp_scores = tmp_scores[ind]
+            ret_box3d.append(tmp_boxes3d)
+            ret_score.append(tmp_scores)
 
         ret_box3d_score = []
         for boxes3d, scores in zip(ret_box3d, ret_score):

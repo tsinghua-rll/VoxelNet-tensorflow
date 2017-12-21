@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月12日 星期二 21时26分43秒
+# Last Modified : 2017年12月20日 星期三 23时16分57秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -39,9 +39,9 @@ class KittiLoader(object):
         assert(use_multi_process_num >= 0)
         self.object_dir = object_dir
         self.is_testset = is_testset
-        self.use_multi_process_num = use_multi_process_num if not self.is_testset else 1
+        self.use_multi_process_num = use_multi_process_num
         self.require_shuffle = require_shuffle if not self.is_testset else False
-        self.batch_size = batch_size if not self.is_testset else 1
+        self.batch_size = batch_size
         self.split_file = split_file
         self.multi_gpu_sum = multi_gpu_sum
 
@@ -178,27 +178,16 @@ class KittiLoader(object):
 
             self.already_extract_data += self.batch_size
 
-            if self.is_testset:
-                ret = (
-                    np.array(tag),
-                    np.array(label),
-                    np.array(vox_feature),
-                    np.array(vox_number),
-                    np.array(vox_coordinate),
-                    np.array(rgb),
-                    np.array(raw_lidar)
+            ret = (
+                np.array(tag),
+                np.array(label),
+                np.array(vox_feature),
+                np.array(vox_number),
+                np.array(vox_coordinate),
+                np.array(rgb),
+                np.array(raw_lidar)
 
-                )
-            else:
-                ret = (
-                    np.array(tag),
-                    np.array(label),
-                    np.array(vox_feature),
-                    np.array(vox_number),
-                    np.array(vox_coordinate),
-                    np.array(rgb),
-                    np.array(raw_lidar)
-                )
+            )
         except:
             print("Dataset empty!")
             ret = None

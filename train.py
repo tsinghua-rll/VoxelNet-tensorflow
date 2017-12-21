@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月18日 星期一 09时27分29秒
+# Last Modified : 2017年12月21日 星期四 10时40分44秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -49,14 +49,13 @@ def main(_):
 
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION,
                                         visible_device_list=cfg.GPU_AVAILABLE,
-                                        allow_growth=True)
+                                        allow_growth=False)
             config = tf.ConfigProto(
                 gpu_options=gpu_options,
                 device_count={
                     "GPU": cfg.GPU_USE_COUNT,
                 },
                 allow_soft_placement=True,
-                allow_growth=True
             )
             with tf.Session(config=config) as sess:
                 model = RPN3D(
@@ -114,7 +113,8 @@ def main(_):
                     if is_summary:
                         summary_writer.add_summary(ret[-1], iter)
 
-                    if is_summary_image:
+                    # if is_summary_image:
+                    if True:
                         ret = model.predict_step(
                             sess, train_loader.load(), summary=True)
                         summary_writer.add_summary(ret[-1], iter)

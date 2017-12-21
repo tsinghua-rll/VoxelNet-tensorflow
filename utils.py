@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月13日 星期三 20时12分49秒
+# Last Modified : 2017年12月21日 星期四 10时37分46秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -227,6 +227,7 @@ def corner_to_center_box3d(boxes_corner):
     return ret
 
 
+# this just for visulize
 def lidar_box3d_to_camera_box(boxes3d, cal_projection=False):
     # (N, 7) -> (N, 4)/(N, 8, 2)  x,y,z,h,w,l,rz -> x1,y1,x2,y2/8*(x, y)
     num = len(boxes3d)
@@ -588,7 +589,7 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 1] = (
             batch_gt_boxes3d[batch_id][id_pos_gt, 1] - anchors_reshaped[id_pos, 1]) / anchors_d[id_pos]
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 2] = (
-            batch_gt_boxes3d[batch_id][id_pos_gt, 2] - anchors_reshaped[id_pos, 2]) / anchors_d[id_pos]
+            batch_gt_boxes3d[batch_id][id_pos_gt, 2] - anchors_reshaped[id_pos, 2]) / cfg.ANCHOR_H 
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 3] = np.log(
             batch_gt_boxes3d[batch_id][id_pos_gt, 3] / anchors_reshaped[id_pos, 3])
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 4] = np.log(
@@ -622,8 +623,10 @@ def delta_to_boxes3d(deltas, anchors, coordinate='lidar'):
     deltas = deltas.reshape(deltas.shape[0], -1, 7)
     anchors_d = np.sqrt(anchors_reshaped[:, 4]**2 + anchors_reshaped[:, 5]**2)
     boxes3d = np.zeros_like(deltas)
-    boxes3d[..., [0, 1, 2]] = deltas[..., [0, 1, 2]] * \
-        anchors_d[:, np.newaxis] + anchors_reshaped[..., [0, 1, 2]]
+    boxes3d[..., [0, 1]] = deltas[..., [0, 1]] * \
+        anchors_d[:, np.newaxis] + anchors_reshaped[..., [0, 1]]
+    boxes3d[..., [2]] = deltas[..., [2]] * \
+        cfg.ANCHOR_H + anchors_reshaped[..., [2]]
     boxes3d[..., [3, 4, 5]] = np.exp(
         deltas[..., [3, 4, 5]]) * anchors_reshaped[..., [3, 4, 5]]
     boxes3d[..., 6] = deltas[..., 6] + anchors_reshaped[..., 6]
