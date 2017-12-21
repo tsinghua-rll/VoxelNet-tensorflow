@@ -16,6 +16,7 @@ import numpy as np
 
 import tensorflow as tf
 
+
 def colorize(value, factor=1, vmin=None, vmax=None):
     """
     A utility function for TensorFlow that maps a grayscale image to a matplotlib
@@ -40,7 +41,7 @@ def colorize(value, factor=1, vmin=None, vmax=None):
     output_color = colorize(output, vmin=0.0, vmax=1.0, cmap='viridis')
     tf.summary.image('output', output_color)
     ```
-    
+
     Returns a 3D tensor of shape [height, width, 3].
     """
 
@@ -48,13 +49,13 @@ def colorize(value, factor=1, vmin=None, vmax=None):
     value = np.sum(value, axis=-1)
     vmin = np.min(value) if vmin is None else vmin
     vmax = np.max(value) if vmax is None else vmax
-    value = (value - vmin) / (vmax - vmin) # vmin..vmax
+    value = (value - vmin) / (vmax - vmin)  # vmin..vmax
 
     value = (value * 255).astype(np.uint8)
     value = cv2.applyColorMap(value, cv2.COLORMAP_JET)
     value = cv2.cvtColor(value, cv2.COLOR_BGR2RGB)
     x, y, _ = value.shape
-    value = cv2.resize(value, (y*factor, x*factor)) 
+    value = cv2.resize(value, (y * factor, x * factor))
 
     return value
 
@@ -85,14 +86,14 @@ def tf_colorize(value, factor=1, vmin=None, vmax=None, cmap=None):
     output_color = colorize(output, vmin=0.0, vmax=1.0, cmap='viridis')
     tf.summary.image('output', output_color)
     ```
-    
+
     Returns a 3D tensor of shape [height, width, 3].
     """
 
     # normalize
     vmin = tf.reduce_min(value) if vmin is None else vmin
     vmax = tf.reduce_max(value) if vmax is None else vmax
-    value = (value - vmin) / (vmax - vmin) # vmin..vmax
+    value = (value - vmin) / (vmax - vmin)  # vmin..vmax
 
     # squeeze last dim if it exists
     value = tf.squeeze(value)

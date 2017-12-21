@@ -71,7 +71,8 @@ class FeatureNet(object):
             self.batch_norm = tf.layers.BatchNormalization(
                 name='batch_norm', fused=True, _reuse=tf.AUTO_REUSE, _scope=scope)
         # boolean mask [K, T, 2 * units]
-        mask = tf.not_equal(tf.reduce_max(self.feature, axis=2, keep_dims=True), 0)
+        mask = tf.not_equal(tf.reduce_max(
+            self.feature, axis=2, keep_dims=True), 0)
         x = self.vfe1.apply(self.feature, mask, self.training)
         x = self.vfe2.apply(x, mask, self.training)
         x = self.dense.apply(x)

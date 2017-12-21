@@ -120,7 +120,7 @@ class RPN3D(object):
         self.bv = tf.placeholder(tf.uint8, [
                                  None, cfg.BV_LOG_FACTOR * cfg.INPUT_HEIGHT, cfg.BV_LOG_FACTOR * cfg.INPUT_WIDTH, 3])
         self.bv_heatmap = tf.placeholder(tf.uint8, [
-                                 None, cfg.BV_LOG_FACTOR * cfg.FEATURE_HEIGHT, cfg.BV_LOG_FACTOR * cfg.FEATURE_WIDTH, 3])
+            None, cfg.BV_LOG_FACTOR * cfg.FEATURE_HEIGHT, cfg.BV_LOG_FACTOR * cfg.FEATURE_WIDTH, 3])
         self.boxes2d = tf.placeholder(tf.float32, [None, 4])
         self.boxes2d_scores = tf.placeholder(tf.float32, [None])
 

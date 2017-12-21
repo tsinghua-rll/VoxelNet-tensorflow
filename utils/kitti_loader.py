@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Thu 21 Dec 2017 07:46:05 PM CST
+# Last Modified : Thu 21 Dec 2017 11:49:21 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -28,7 +28,7 @@ class KittiLoader(object):
 
     # return:
     # tag (N)
-    # label (N) (N') (just raw string in the label files) (when it is not test set)
+    # label (N) (N')
     # rgb (N, H, W, C)
     # raw_lidar (N) (N', 4)
     # vox_feature

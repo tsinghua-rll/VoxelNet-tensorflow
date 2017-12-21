@@ -20,13 +20,13 @@ from utils import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='testing')
-    
+
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='default',
-                    help='set log tag')
+                        help='set log tag')
     parser.add_argument('--output-path', type=str, nargs='?',
                         default='./data/results/data', help='results output dir')
     parser.add_argument('-b', '--single-batch-size', type=int, nargs='?', default=1,
-                    help='set batch size for each gpu')
+                        help='set batch size for each gpu')
 
     args = parser.parse_args()
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
                                 item[1:8] = lidar_to_camera_box(
                                     item[1:8][np.newaxis, :].astype(np.float32))[0]
                                 box2d = lidar_box3d_to_camera_box(
-                                    item[1:8][np.newaxis, :].astype(np.float32) , cal_projection=False)[0]
+                                    item[1:8][np.newaxis, :].astype(np.float32), cal_projection=False)[0]
                                 f.write('{:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}\n'.format(
                                     item[0], 0, 0, 0, *box2d, *(item[1:])))
                         print('write out {}'.format(of_path))

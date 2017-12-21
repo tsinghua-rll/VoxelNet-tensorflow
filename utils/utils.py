@@ -1,16 +1,17 @@
-#!/usr/bin/env python
+
 # -*- cooing:UTF-8 -*-
 
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Thu 21 Dec 2017 07:47:18 PM CST
+# Last Modified : Fri 22 Dec 2017 12:50:08 AM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
 import numpy as np
 import shapely.geometry
 import shapely.affinity
+import math
 from numba import jit
 
 from config import cfg
@@ -177,7 +178,7 @@ def corner_to_center_box3d(boxes_corner):
             h = abs(np.sum(roi[:4, 1] - roi[4:, 1]) / 4)
             w = np.sum(
                 np.sqrt(np.sum((roi[0, [0, 2]] - roi[3, [0, 2]])**2)) +
-                ptnp.sqrt(np.sum((roi[1, [0, 2]] - roi[2, [0, 2]])**2)) +
+                np.sqrt(np.sum((roi[1, [0, 2]] - roi[2, [0, 2]])**2)) +
                 np.sqrt(np.sum((roi[4, [0, 2]] - roi[7, [0, 2]])**2)) +
                 np.sqrt(np.sum((roi[5, [0, 2]] - roi[6, [0, 2]])**2))
             ) / 4
@@ -227,7 +228,7 @@ def corner_to_center_box3d(boxes_corner):
     return ret
 
 
-# this just for visulize
+# this just for visulize and testing
 def lidar_box3d_to_camera_box(boxes3d, cal_projection=False):
     # (N, 7) -> (N, 4)/(N, 8, 2)  x,y,z,h,w,l,rz -> x1,y1,x2,y2/8*(x, y)
     num = len(boxes3d)
@@ -383,14 +384,16 @@ def label_to_gt_box3d(labels, cls='Car', coordinate='camera'):
         acc_cls = ['Car', 'Van']
     elif cls == 'Pedestrian':
         acc_cls = ['Pedestrian']
-    else:
+    elif cls == 'Cyclist':
         acc_cls = ['Cyclist']
+    else:
+        acc_cls = []
 
     for label in labels:
         boxes3d_a_label = []
         for line in label:
             ret = line.split()
-            if ret[0] in acc_cls:
+            if ret[0] in acc_cls or acc_cls == []:
                 h, w, l, x, y, z, r = [float(i) for i in ret[-7:]]
                 box3d = np.array([x, y, z, h, w, l, r])
                 boxes3d_a_label.append(box3d)
@@ -401,104 +404,54 @@ def label_to_gt_box3d(labels, cls='Car', coordinate='camera'):
     return boxes3d
 
 
-# def cal_iou2d(box1, box2):
-#     # Input:
-#     #   box1/2: x, y, w, l, r
-#     # Output:
-#     #   iou
-#     x1, y1, w1, l1, r1 = box1
-#     x2, y2, w2, l2, r2 = box2
-#     c1 = shapely.geometry.box(-w1/2.0, -l1/2.0, w1/2.0, l1/2.0)
-#     c2 = shapely.geometry.box(-w2/2.0, -l2/2.0, w2/2.0, l2/2.0)
-#
-#     c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
-#     c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
-#
-#     c1 = shapely.affinity.translate(c1, x1, y1)
-#     c2 = shapely.affinity.translate(c1, x2, y2)
-#
-#     intersect = c1.intersection(c2)
-#
-#     return intersect.area/(c1.area + c2.area - intersect.area)
-#
-#
-#
-# def cal_iou3d(box1, box2):
-#     # Input:
-#     #   box1/2: x, y, z, h, w, l, r
-#     # Output:
-#     #   iou
-#     def cal_z_intersect(cz1, h1, cz2, h2):
-#         b1z1, b1z2 = cz1 - h1/2, cz1 + h1/2
-#         b2z1, b2z2 = cz2 - h2/2, cz2 + h2/2
-#         if b1z1 > b2z2 or b2z1 > b1z2:
-#             return 0
-#         elif b2z1 <= b1z1 <= b2z2:
-#             if b1z2 <= b2z2:
-#                 return h1/h2
-#             else:
-#                 return (b2z2-b1z1)/(b1z2-b2z1)
-#         elif b1z1 < b2z1 < b1z2:
-#             if b2z2 <= b1z2:
-#                 return h2/h1
-#             else:
-#                 return (b1z2-b2z1)/(b2z2-b1z1)
-#
-#     x1, y1, z1, h1, w1, l1, r1 = box1
-#     x2, y2, z2, h2, w2, l2, r2 = box2
-#     c1 = shapely.geometry.box(-w1/2.0, -l1/2.0, w1/2.0, l1/2.0)
-#     c2 = shapely.geometry.box(-w2/2.0, -l2/2.0, w2/2.0, l2/2.0)
-#
-#     c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
-#     c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
-#
-#     c1 = shapely.affinity.translate(c1, x1, y1)
-#     c2 = shapely.affinity.translate(c1, x2, y2)
-#
-#     z_intersect = cal_z_intersect(z1, h1, z2, h2)
-#
-#     intersect = c1.intersection(c2)
-#
-#     return intersect.area*z_intersect/(c1.area*h1 + c2.area*h2 - intersect.area*z_intersect)
-#
-#
-#
-# @jit
-# def cal_box3d_iou(boxes3d, gt_boxes3d, cal_3d=False):
-#     # Inputs:
-#     #   boxes3d: (N1, 7) x,y,z,h,w,l,r
-#     #   gt_boxed3d: (N2, 7) x,y,z,h,w,l,r
-#     # Outputs:
-#     #   iou: (N1, N2)
-#
-#     N1, N2 = len(boxes3d), len(gt_boxes3d)
-#     output = np.zeros((N1, N2))
-#     for idx in range(N1):
-#         for idy in range(N2):
-#             if cal_3d:
-#                 output[idx, idy] = cal_iou3d(boxes3d[idx], gt_boxes3d[idy])
-#             else:
-#                 output[idx, idy] = cal_iou2d(boxes3d[idx, [0,1,4,5,6]], gt_boxes3d[idy, [0,1,4,5,6]])
-#
-#     return output
-#
-#
-#
-# @jit
-# def cal_box2d_iou(boxes2d, gt_boxes2d):
-#     # Inputs:
-#     #   boxes2d: (N1, 5) x,y,w,l,r
-#     #   gt_boxes2d: (N2, 5) x,y,w,l,r
-#     # Outputs:
-#     #   iou: (N1, N2)
-#
-#     N1, N2 = len(boxes2d), len(gt_boxes2d)
-#     output = np.zeros((N1, N2))
-#     for idx in range(N1):
-#         for idy in range(N2):
-#             output[idx, idy] = cal_iou2d(boxes2d[idx], gt_boxes2d[idy])
-#
-#     return output
+def box3d_to_label(batch_box3d, batch_cls, batch_score=[], coordinate='camera'):
+    # Input:
+    #   (N, N', 7) x y z h w l r
+    #   (N, N')
+    #   cls: (N, N') 'Car' or 'Pedestrain' or 'Cyclist'
+    #   coordinate(input): 'camera' or 'lidar'
+    # Output:
+    #   label: (N, N') N batches and N lines
+    batch_label = []
+    if batch_score:
+        template = '{} ' + ' '.join(['{:.4f}' for i in range(15)]) + '\n'
+        for boxes, scores, clses in zip(batch_box3d, batch_score, batch_cls):
+            label = []
+            for box, score, cls in zip(boxes, scores, clses):
+                if coordinate == 'camera':
+                    box3d = box
+                    box2d = lidar_box3d_to_camera_box(
+                        camera_to_lidar_box(box[np.newaxis, :].astype(np.float32)), cal_projection=False)[0]
+                else:
+                    box3d = lidar_to_camera_box(
+                        box[np.newaxis, :].astype(np.float32))[0]
+                    box2d = lidar_box3d_to_camera_box(
+                        box[np.newaxis, :].astype(np.float32), cal_projection=False)[0]
+                x, y, z, h, w, l, r = box3d
+                box3d = [h, w, l, x, y, z, r]
+                label.append(template.format(
+                    cls, 0, 0, 0, *box2d, *box3d, score))
+            batch_label.append(label)
+    else:
+        template = '{} ' + ' '.join(['{:.4f}' for i in range(14)]) + '\n'
+        for boxes, clses in zip(batch_box3d, batch_cls):
+            label = []
+            for box, cls in zip(boxes, clses):
+                if coordinate == 'camera':
+                    box3d = box
+                    box2d = lidar_box3d_to_camera_box(
+                        camera_to_lidar_box(box[np.newaxis, :].astype(np.float32)), cal_projection=False)[0]
+                else:
+                    box3d = lidar_to_camera_box(
+                        box[np.newaxis, :].astype(np.float32))[0]
+                    box2d = lidar_box3d_to_camera_box(
+                        box[np.newaxis, :].astype(np.float32), cal_projection=False)[0]
+                x, y, z, h, w, l, r = box3d
+                box3d = [h, w, l, x, y, z, r]
+                label.append(template.format(cls, 0, 0, 0, *box2d, *box3d))
+            batch_label.append(label)
+
+    return np.array(batch_label)
 
 
 def cal_anchors():
@@ -589,7 +542,7 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 1] = (
             batch_gt_boxes3d[batch_id][id_pos_gt, 1] - anchors_reshaped[id_pos, 1]) / anchors_d[id_pos]
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 2] = (
-            batch_gt_boxes3d[batch_id][id_pos_gt, 2] - anchors_reshaped[id_pos, 2]) / cfg.ANCHOR_H 
+            batch_gt_boxes3d[batch_id][id_pos_gt, 2] - anchors_reshaped[id_pos, 2]) / cfg.ANCHOR_H
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 3] = np.log(
             batch_gt_boxes3d[batch_id][id_pos_gt, 3] / anchors_reshaped[id_pos, 3])
         targets[batch_id, index_x, index_y, np.array(index_z) * 7 + 4] = np.log(
@@ -632,6 +585,65 @@ def delta_to_boxes3d(deltas, anchors, coordinate='lidar'):
     boxes3d[..., 6] = deltas[..., 6] + anchors_reshaped[..., 6]
 
     return boxes3d
+
+
+def point_transform(points, tx, ty, tz, rx=0, ry=0, rz=0):
+    # Input:
+    #   points: (N, 3)
+    #   rx/y/z: in radians
+    # Output:
+    #   points: (N, 3)
+    N = points.shape[0]
+    points = np.hstack([points, np.ones((N, 1))])
+
+    mat1 = np.zeros((4, 4))
+    mat1[3, 0:3] = tx, ty, tz
+    points = np.matmul(points, mat1)
+
+    if rx != 0:
+        mat = np.zeros((4, 4))
+        mat[0, 0] = 1
+        mat[3, 3] = 1
+        mat[1, 1] = np.cos(rx)
+        mat[1, 2] = -np.sin(rx)
+        mat[2, 1] = np.sin(rx)
+        mat[2, 2] = np.cos(rx)
+        points = np.matmul(points, mat)
+
+    if ry != 0:
+        mat = np.zeros((4, 4))
+        mat[1, 1] = 1
+        mat[3, 3] = 1
+        mat[0, 0] = np.cos(ry)
+        mat[0, 2] = np.sin(ry)
+        mat[2, 0] = -np.sin(ry)
+        mat[2, 2] = np.cos(ry)
+        points = np.matmul(points, mat)
+
+    if rz != 0:
+        mat = np.zeros((4, 4))
+        mat[2, 2] = 1
+        mat[3, 3] = 1
+        mat[0, 0] = np.cos(rz)
+        mat[0, 1] = -np.sin(rz)
+        mat[1, 0] = np.sin(rz)
+        mat[1, 1] = np.cos(rz)
+        points = np.matmul(points, mat)
+
+    return points[:, 0:3]
+
+
+def box_transform(boxes, tx, ty, tz, rz=0):
+    # Input:
+    #   boxes: (N, 7) x y z h w l rz
+    # Output:
+    #   boxes: (N, 7) x y z h w l rz
+    boxes_corner = center_to_corner_box3d(boxes)  # (N, 8, 3)
+    for idx in range(len(boxes_corner)):
+        boxes_corner[idx] = point_transform(
+            boxes_corner[idx], tx, ty, tz, rz=rz)
+
+    return corner_to_center_box3d(boxes_corner)
 
 
 if __name__ == '__main__':

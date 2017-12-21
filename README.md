@@ -14,6 +14,9 @@ $ python setup.py build_ext --inplace
 3. run `train.py`
 4. launch a tensorboard and wait for the training process
 
+# Data augmentation
+run `data_aug.py`.
+
 # Result
 
 TBD
@@ -22,7 +25,8 @@ TBD
 
 - [X] nan and inf bugs fix
 - [X] multicard support
+- [X] data augmentation
 
 # Acknowledgement
 
-Thanks to [@ring00](https://github.com/ring00) for the implementation of VFE layer and **Jialin Zhao** for the implementation of the RPN
+Thanks to[@ring00](https: // github.com / ring00) for the implementation of VFE layer and **Jialin Zhao ** for the implementation of the RPN
