@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Thu 21 Dec 2017 09:07:10 PM CST
+# Last Modified : Sat 23 Dec 2017 01:43:56 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -280,6 +280,7 @@ class RPN3D(object):
 
         output_feed = [self.prob_output, self.delta_output]
         probs, deltas = session.run(output_feed, input_feed)
+        from ipdb import set_trace; set_trace()
         # BOTTLENECK
         batch_boxes3d = delta_to_boxes3d(
             deltas, self.anchors, coordinate='lidar')

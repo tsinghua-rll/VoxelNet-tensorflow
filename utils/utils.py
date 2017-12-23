@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Fri 22 Dec 2017 12:50:08 AM CST
+# Last Modified : Sat 23 Dec 2017 06:47:58 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -21,6 +21,18 @@ from utils.box_overlaps import *
 def lidar_to_bird_view(x, y, factor=1):
     # using the cfg.INPUT_XXX
     return (x - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor, (y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor
+
+
+def angle_in_limit(angle):
+    # To limit the angle in -pi/2 - pi/2
+    limit_degree = 5
+    while angle >= np.pi/2:
+        angle -= np.pi
+    while angle < -np.pi/2:
+        angle += np.pi
+    if abs(angle+np.pi/2) < limit_degree/180*np.pi:
+        angle = np.pi/2
+    return angle 
 
 
 def camera_to_lidar(x, y, z):
@@ -41,28 +53,24 @@ def lidar_to_camera(x, y, z):
 
 def camera_to_lidar_point(points):
     # (N, 3) -> (N, 3)
-    ret = []
-    for p in points:
-        x, y, z = p
-        p = np.array([x, y, z, 1])
-        p = np.matmul(np.linalg.inv(np.array(cfg.MATRIX_R_RECT_0)), p)
-        p = np.matmul(np.linalg.inv(np.array(cfg.MATRIX_T_VELO_2_CAM)), p)
-        p = p[0:3]
-        ret.append(p)
-    return np.array(ret).reshape(-1, 3)
+    N = points.shape[0]
+    points = np.hstack([points, np.ones((N, 1))]).T # (N,4) -> (4,N)
+
+    points = np.matmul(np.linalg.inv(np.array(cfg.MATRIX_R_RECT_0)), points)
+    points = np.matmul(np.linalg.inv(np.array(cfg.MATRIX_T_VELO_2_CAM)), points).T #(4, N) -> (N, 4)
+    points = points[:, 0:3]
+    return points.reshape(-1, 3)
 
 
 def lidar_to_camera_point(points):
     # (N, 3) -> (N, 3)
-    ret = []
-    for p in points:
-        x, y, z = p
-        p = np.array([x, y, z, 1])
-        p = np.matmul(np.array(cfg.MATRIX_T_VELO_2_CAM), p)
-        p = np.matmul(np.array(cfg.MATRIX_R_RECT_0), p)
-        p = p[0:3]
-        ret.append(p)
-    return np.array(ret).reshape(-1, 3)
+    N = points.shape[0]
+    points = np.hstack([points, np.ones((N, 1))]).T
+
+    points = np.matmul(np.array(cfg.MATRIX_T_VELO_2_CAM), points)
+    points = np.matmul(np.array(cfg.MATRIX_R_RECT_0), points).T
+    points = points[:, 0:3]
+    return points.reshape(-1, 3)
 
 
 def camera_to_lidar_box(boxes):
@@ -72,6 +80,7 @@ def camera_to_lidar_box(boxes):
         x, y, z, h, w, l, ry = box
         (x, y, z), h, w, l, rz = camera_to_lidar(
             x, y, z), h, w, l, -ry - np.pi / 2
+        rz = angle_in_limit(rz)
         ret.append([x, y, z, h, w, l, rz])
     return np.array(ret).reshape(-1, 7)
 
@@ -83,24 +92,28 @@ def lidar_to_camera_box(boxes):
         x, y, z, h, w, l, rz = box
         (x, y, z), h, w, l, ry = lidar_to_camera(
             x, y, z), h, w, l, -rz - np.pi / 2
+        ry = angle_in_limit(ry)
         ret.append([x, y, z, h, w, l, ry])
     return np.array(ret).reshape(-1, 7)
 
 
-def center_to_corner_box2d(boxes_center):
+def center_to_corner_box2d(boxes_center, coordinate='lidar'):
     # (N, 5) -> (N, 4, 2)
     N = boxes_center.shape[0]
     boxes3d_center = np.zeros((N, 7))
     boxes3d_center[:, [0, 1, 4, 5, 6]] = boxes_center
-    boxes3d_corner = center_to_corner_box3d(boxes3d_center)
+    boxes3d_corner = center_to_corner_box3d(boxes3d_center, coordinate=coordinate)
 
     return boxes3d_corner[:, 0:4, 0:2]
 
 
-def center_to_corner_box3d(boxes_center):
+def center_to_corner_box3d(boxes_center, coordinate='lidar'):
     # (N, 7) -> (N, 8, 3)
     N = boxes_center.shape[0]
     ret = np.zeros((N, 8, 3), dtype=np.float32)
+
+    if coordinate == 'camera':
+        boxes_center = camera_to_lidar_box(boxes_center)
 
     for i in range(N):
         box = boxes_center[i]
@@ -109,10 +122,10 @@ def center_to_corner_box3d(boxes_center):
         rotation = [0, 0, box[-1]]
 
         h, w, l = size[0], size[1], size[2]
-        trackletBox = np.array([  # in velodyne coordinates around zero point and without orientation yet\
+        trackletBox = np.array([  # in velodyne coordinates around zero point and without orientation yet
             [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
             [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
-            [0.0, 0.0, 0.0, 0.0, h, h, h, h]])
+            [0, 0, 0, 0, h, h, h, h]])
 
         # re-create 3D bounding box in velodyne coordinate system
         yaw = rotation[2]
@@ -125,16 +138,20 @@ def center_to_corner_box3d(boxes_center):
         box3d = cornerPosInVelo.transpose()
         ret[i] = box3d
 
+    if coordinate == 'camera':
+        for idx in range(len(ret)):
+            ret[idx] = lidar_to_camera_point(ret[idx])
+
     return ret
 
 
-def corner_to_center_box2d(boxes_corner):
-    # (N, 4, 2) -> (N, 5)
+def corner_to_center_box2d(boxes_corner, coordinate='lidar'):
+    # (N, 4, 2) -> (N, 5)  x,y,w,l,r
     N = boxes_corner.shape[0]
     boxes3d_corner = np.zeros((N, 8, 3))
     boxes3d_corner[:, 0:4, 0:2] = boxes_corner
     boxes3d_corner[:, 4:8, 0:2] = boxes_corner
-    boxes3d_center = corner_to_center_box3d(boxes3d_corner)
+    boxes3d_center = corner_to_center_box3d(boxes3d_corner, coordinate=coordinate)
 
     return boxes3d_center[:, [0, 1, 4, 5, 6]]
 
@@ -169,8 +186,11 @@ def anchor_to_standup_box2d(anchors):
     return anchor_standup
 
 
-def corner_to_center_box3d(boxes_corner):
-    # (N, 8, 3) -> (N, 7)
+def corner_to_center_box3d(boxes_corner, coordinate='camera'):
+    # (N, 8, 3) -> (N, 7) x,y,z,h,w,l,ry/z
+    if coordinate == 'lidar':
+        for idx in range(len(boxes_corner)):
+            boxes_corner[idx] = lidar_to_camera_point(boxes_corner[idx])
     ret = []
     for roi in boxes_corner:
         if cfg.CORNER2CENTER_AVG:  # average version
@@ -199,6 +219,9 @@ def corner_to_center_box3d(boxes_corner):
                 math.atan2(roi[3, 2] - roi[2, 2], roi[2, 0] - roi[3, 0]) +
                 math.atan2(roi[7, 2] - roi[6, 2], roi[6, 0] - roi[7, 0])
             ) / 8
+            if w > l:
+                w, l = l, w
+                ry = angle_in_limit(ry+np.pi/2)
         else:  # max version
             h = max(abs(roi[:4, 1] - roi[4:, 1]))
             w = np.max(
@@ -224,8 +247,14 @@ def corner_to_center_box3d(boxes_corner):
                 math.atan2(roi[3, 2] - roi[2, 2], roi[2, 0] - roi[3, 0]) +
                 math.atan2(roi[7, 2] - roi[6, 2], roi[6, 0] - roi[7, 0])
             ) / 8
+            if w > l:
+                w, l = l, w
+                ry = angle_in_limit(ry+np.pi/2)
         ret.append([x, y, z, h, w, l, ry])
-    return ret
+    if coordinate == 'lidar':
+        ret = camera_to_lidar_box(np.array(ret))
+
+    return np.array(ret)
 
 
 # this just for visulize and testing
@@ -235,25 +264,22 @@ def lidar_box3d_to_camera_box(boxes3d, cal_projection=False):
     boxes2d = np.zeros((num, 4), dtype=np.int32)
     projections = np.zeros((num, 8, 2), dtype=np.float32)
 
-    boxes3d_corner = center_to_corner_box3d(boxes3d)
-    # TODO: here maybe some problems, check Mt/Kt
-    Mt = np.array(cfg.MATRIX_Mt)
-    Kt = np.array(cfg.MATRIX_Kt)
-
+    lidar_boxes3d_corner = center_to_corner_box3d(boxes3d, coordinate='lidar')
+    P2 = np.array(cfg.MATRIX_P2)
+    
     for n in range(num):
-        box3d = boxes3d_corner[n]
-        Ps = np.hstack((box3d, np.ones((8, 1))))
-        Qs = np.matmul(Ps, Mt)
-        Qs = Qs[:, 0:3]
-        qs = np.matmul(Qs, Kt)
-        zs = qs[:, 2].reshape(8, 1)
-        qs = (qs / zs)
+        box3d = lidar_boxes3d_corner[n]
+        box3d = lidar_to_camera_point(box3d)
+        points = np.hstack((box3d, np.ones((8, 1)))).T # (8, 4) -> (4, 8)
+        points = np.matmul(P2, points).T
+        points[:, 0] /= points[:, 2]
+        points[:, 1] /= points[:, 2]
 
-        projections[n] = qs[:, 0:2]
-        minx = int(np.min(qs[:, 0]))
-        maxx = int(np.max(qs[:, 0]))
-        miny = int(np.min(qs[:, 1]))
-        maxy = int(np.max(qs[:, 1]))
+        projections[n] = points[:, 0:2]
+        minx = int(np.min(points[:, 0]))
+        maxx = int(np.max(points[:, 0]))
+        miny = int(np.min(points[:, 1]))
+        maxy = int(np.max(points[:, 1]))
 
         boxes2d[n, :] = minx, miny, maxx, maxy
 
@@ -284,7 +310,7 @@ def lidar_to_bird_view_img(lidar, factor=1):
 
 
 def draw_lidar_box3d_on_image(img, boxes3d, scores, gt_boxes3d=np.array([]),
-                              color=(255, 255, 0), gt_color=(255, 0, 255), thickness=1):
+                              color=(0, 255, 255), gt_color=(255, 0, 255), thickness=1):
     # Input:
     #   img: (h, w, 3)
     #   boxes3d (N, 7) [x, y, z, h, w, l, r]
@@ -324,19 +350,19 @@ def draw_lidar_box3d_on_image(img, boxes3d, scores, gt_boxes3d=np.array([]),
             cv2.line(img, (qs[i, 0], qs[i, 1]), (qs[j, 0],
                                                  qs[j, 1]), gt_color, thickness, cv2.LINE_AA)
 
-    return img.astype(np.uint8)
+    return cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB)
 
 
 def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array([]),
-                                 color=(255, 255, 0), gt_color=(255, 0, 255), thickness=1, factor=1):
+                                 color=(0, 255, 255), gt_color=(255, 0, 255), thickness=1, factor=1):
     # Input:
     #   birdview: (h, w, 3)
     #   boxes3d (N, 7) [x, y, z, h, w, l, r]
     #   scores
     #   gt_boxes3d (N, 7) [x, y, z, h, w, l, r]
     img = birdview.copy()
-    corner_boxes3d = center_to_corner_box3d(boxes3d)
-    corner_gt_boxes3d = center_to_corner_box3d(gt_boxes3d)
+    corner_boxes3d = center_to_corner_box3d(boxes3d, coordinate='lidar')
+    corner_gt_boxes3d = center_to_corner_box3d(gt_boxes3d, coordinate='lidar')
     # draw gt
     for box in corner_gt_boxes3d:
         x0, y0 = lidar_to_bird_view(*box[0, 0:2], factor=factor)
@@ -369,7 +395,7 @@ def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array(
         cv2.line(img, (int(x3), int(y3)), (int(x0), int(y0)),
                  color, thickness, cv2.LINE_AA)
 
-    return img.astype(np.uint8)
+    return cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB)
 
 
 def label_to_gt_box3d(labels, cls='Car', coordinate='camera'):
@@ -497,7 +523,6 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
     targets = np.zeros((batch_size, *feature_map_shape, 14))
 
     for batch_id in range(batch_size):
-        # TODO: too slow, use untilting box instead
         # BOTTLENECK
         anchors_standup_2d = anchor_to_standup_box2d(
             anchors_reshaped[:, [0, 1, 4, 5]])
@@ -596,7 +621,7 @@ def point_transform(points, tx, ty, tz, rx=0, ry=0, rz=0):
     N = points.shape[0]
     points = np.hstack([points, np.ones((N, 1))])
 
-    mat1 = np.zeros((4, 4))
+    mat1 = np.eye(4)
     mat1[3, 0:3] = tx, ty, tz
     points = np.matmul(points, mat1)
 
@@ -633,17 +658,117 @@ def point_transform(points, tx, ty, tz, rx=0, ry=0, rz=0):
     return points[:, 0:3]
 
 
-def box_transform(boxes, tx, ty, tz, rz=0):
+# only work in lidar coordinate
+def box_transform(boxes, tx, ty, tz, r=0, coordinate='lidar'):
     # Input:
     #   boxes: (N, 7) x y z h w l rz
     # Output:
     #   boxes: (N, 7) x y z h w l rz
-    boxes_corner = center_to_corner_box3d(boxes)  # (N, 8, 3)
+    boxes_corner = center_to_corner_box3d(boxes, coordinate=coordinate)  # (N, 8, 3)
     for idx in range(len(boxes_corner)):
-        boxes_corner[idx] = point_transform(
-            boxes_corner[idx], tx, ty, tz, rz=rz)
+        if coordinate == 'lidar':
+            boxes_corner[idx] = point_transform(boxes_corner[idx], tx, ty, tz, rz=r)
+        else:
+            boxes_corner[idx] = point_transform(boxes_corner[idx], tx, ty, tz, ry=r)
 
-    return corner_to_center_box3d(boxes_corner)
+    return corner_to_center_box3d(boxes_corner, coordinate=coordinate)
+
+
+def cal_iou2d(box1, box2):
+    # Input:
+    #   box1/2: x, y, w, l, r
+    # Output:
+    #   iou
+    x1, y1, w1, l1, r1 = box1
+    x2, y2, w2, l2, r2 = box2 
+    c1 = shapely.geometry.box(-w1/2.0, -l1/2.0, w1/2.0, l1/2.0)
+    c2 = shapely.geometry.box(-w2/2.0, -l2/2.0, w2/2.0, l2/2.0)
+    
+    c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
+    c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
+
+    c1 = shapely.affinity.translate(c1, x1, y1)
+    c2 = shapely.affinity.translate(c2, x2, y2)
+
+    intersect = c1.intersection(c2)
+
+    return intersect.area/(c1.area + c2.area - intersect.area)
+
+def cal_z_intersect(cz1, h1, cz2, h2):
+    b1z1, b1z2 = cz1 - h1/2, cz1 + h1/2
+    b2z1, b2z2 = cz2 - h2/2, cz2 + h2/2
+    if b1z1 > b2z2 or b2z1 > b1z2:
+        return 0
+    elif b2z1 <= b1z1 <= b2z2:
+        if b1z2 <= b2z2:
+            return h1/h2     
+        else:
+            return (b2z2-b1z1)/(b1z2-b2z1)
+    elif b1z1 < b2z1 < b1z2:
+        if b2z2 <= b1z2:
+            return h2/h1 
+        else:
+            return (b1z2-b2z1)/(b2z2-b1z1)
+
+
+def cal_iou3d(box1, box2):
+    # Input:
+    #   box1/2: x, y, z, h, w, l, r
+    # Output:
+    #   iou 
+
+    x1, y1, z1, h1, w1, l1, r1 = box1
+    x2, y2, z2, h2, w2, l2, r2 = box2 
+    c1 = shapely.geometry.box(-w1/2.0, -l1/2.0, w1/2.0, l1/2.0)
+    c2 = shapely.geometry.box(-w2/2.0, -l2/2.0, w2/2.0, l2/2.0)
+    
+    c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
+    c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
+
+    c1 = shapely.affinity.translate(c1, x1, y1)
+    c2 = shapely.affinity.translate(c2, x2, y2)
+
+    z_intersect = cal_z_intersect(z1, h1, z2, h2)
+
+    intersect = c1.intersection(c2)
+
+    return intersect.area*z_intersect/(c1.area*h1 + c2.area*h2 - intersect.area*z_intersect)
+
+
+def cal_box3d_iou(boxes3d, gt_boxes3d, cal_3d=0):
+    # Inputs:
+    #   boxes3d: (N1, 7) x,y,z,h,w,l,r
+    #   gt_boxed3d: (N2, 7) x,y,z,h,w,l,r
+    # Outputs:
+    #   iou: (N1, N2)
+    N1 = len(boxes3d)
+    N2 = len(gt_boxes3d)
+    output = np.zeros((N1, N2), dtype=np.float32)
+
+    for idx in range(N1):
+        for idy in range(N2):
+            if cal_3d:
+                output[idx, idy] = float(cal_iou3d(boxes3d[idx], gt_boxes3d[idy]))
+            else:
+                output[idx, idy] = float(cal_iou2d(boxes3d[idx, [0,1,4,5,6]], gt_boxes3d[idy, [0,1,4,5,6]]))
+
+    return output 
+
+
+def cal_box2d_iou(boxes2d, gt_boxes2d): 
+    # Inputs:
+    #   boxes2d: (N1, 5) x,y,w,l,r
+    #   gt_boxes2d: (N2, 5) x,y,w,l,r
+    # Outputs:
+    #   iou: (N1, N2)
+    N1 = len(boxes2d)
+    N2 = len(gt_boxes2d)
+    output = np.zeros((N1, N2), dtype=np.float32)
+    for idx in range(N1):
+        for idy in range(N2):
+            output[idx, idy] = cal_iou2d(boxes2d[idx], gt_boxes2d[idy])
+
+    return output 
 
 
 if __name__ == '__main__':

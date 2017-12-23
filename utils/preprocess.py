@@ -4,7 +4,7 @@
 # File Name : preprocess.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : Fri 22 Dec 2017 12:05:28 AM CST
+# Last Modified : Fri 22 Dec 2017 09:38:27 AM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import os
@@ -31,7 +31,7 @@ else:
     max_point_number = 45
 
 
-def process_pointcloud(point_cloud):
+def process_pointcloud(point_cloud, cls=cfg.DETECT_OBJ):
     # Input:
     #   (N, 4)
     # Output:
