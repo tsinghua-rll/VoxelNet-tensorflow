@@ -4,7 +4,7 @@
 # File Name : data_aug.py
 # Purpose :
 # Creation Date : 21-12-2017
-# Last Modified : Sat 23 Dec 2017 07:18:27 PM CST
+# Last Modified : Sat 23 Dec 2017 08:48:15 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import numpy as np
@@ -33,12 +33,11 @@ def worker(tag):
     label = np.array([line for line in open(os.path.join(
         object_dir, 'training', 'label_2', tag + '.txt'), 'r').readlines()])  # (N')
     cls = np.array([line.split()[0] for line in label])  # (N')
-    gt_box3d = label_to_gt_box3d(np.array(label)[np.newaxis, :], cls='')[
+    gt_box3d = label_to_gt_box3d(np.array(label)[np.newaxis, :], cls='', coordinate='camera')[
         0]  # (N', 7) x, y, z, h, w, l, r
 
     choice = np.random.randint(1, 10)
     if choice >= 6:
-        # TODO: all in lidar coordinate
         lidar_center_gt_box3d = camera_to_lidar_box(gt_box3d)
         lidar_corner_gt_box3d = center_to_corner_box3d(
             lidar_center_gt_box3d, coordinate='lidar')
@@ -98,8 +97,7 @@ def worker(tag):
         gt_box3d[:, 0:6] = gt_box3d[:, 0:6] * factor
         newtag = 'aug_{}_3_{:.4f}'.format(tag, factor).replace('.', '_')
 
-    label = box3d_to_label(gt_box3d[np.newaxis, ...], cls[np.newaxis, ...])[
-        0]  # (N')
+    label = box3d_to_label(gt_box3d[np.newaxis, ...], cls[np.newaxis, ...], coordinate='camera')[0]  # (N')
     cv2.imwrite(os.path.join(output_path, 'image_2', newtag + '.png'), rgb)
     lidar.reshape(-1).tofile(os.path.join(output_path,
                                           'velodyne', newtag + '.bin'))

@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月23日 星期六 18时50分41秒
+# Last Modified : Sat 23 Dec 2017 09:38:49 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -143,7 +143,7 @@ if __C.DETECT_OBJ == 'Car':
     __C.ANCHOR_L = 3.9
     __C.ANCHOR_W = 1.6
     __C.ANCHOR_H = 1.56
-    __C.ANCHOR_Z = -1.0
+    __C.ANCHOR_Z = -1.0 - cfg.ANCHOR_H/2
     __C.RPN_POS_IOU = 0.6
     __C.RPN_NEG_IOU = 0.45
 
@@ -152,7 +152,7 @@ elif __C.DETECT_OBJ == 'Pedestrian':
     __C.ANCHOR_L = 0.8
     __C.ANCHOR_W = 0.6
     __C.ANCHOR_H = 1.73
-    __C.ANCHOR_Z = -0.6
+    __C.ANCHOR_Z = -0.6 - cfg.ANCHOR_H/2
     __C.RPN_POS_IOU = 0.5
     __C.RPN_NEG_IOU = 0.35
 
@@ -161,7 +161,7 @@ if __C.DETECT_OBJ == 'Cyclist':
     __C.ANCHOR_L = 1.76
     __C.ANCHOR_W = 0.6
     __C.ANCHOR_H = 1.73
-    __C.ANCHOR_Z = -0.6
+    __C.ANCHOR_Z = -0.6 - cfg.ANCHOR_H/2
     __C.RPN_POS_IOU = 0.5
     __C.RPN_NEG_IOU = 0.35
 

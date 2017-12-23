@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Sat 23 Dec 2017 06:47:58 PM CST
+# Last Modified : Sat 23 Dec 2017 08:51:09 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -517,7 +517,7 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
     #   targets (N, w, l, 14)
     # attention: cal IoU on birdview
     batch_size = labels.shape[0]
-    batch_gt_boxes3d = label_to_gt_box3d(labels, cls=cls, coordinate='lidar')
+    batch_gt_boxes3d = label_to_gt_box3d(labels, cls=cls, coordinate=coordinate)
     # defined in eq(1) in 2.2
     anchors_reshaped = anchors.reshape(-1, 7)
     anchors_d = np.sqrt(anchors_reshaped[:, 4]**2 + anchors_reshaped[:, 5]**2)
@@ -531,7 +531,7 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
             anchors_reshaped[:, [0, 1, 4, 5]])
         # BOTTLENECK
         gt_standup_2d = corner_to_standup_box2d(center_to_corner_box2d(
-            batch_gt_boxes3d[batch_id][:, [0, 1, 4, 5, 6]]))
+            batch_gt_boxes3d[batch_id][:, [0, 1, 4, 5, 6]], coordinate=coordinate))
 
         iou = bbox_overlaps(
             np.ascontiguousarray(anchors_standup_2d).astype(np.float32),
@@ -661,12 +661,11 @@ def point_transform(points, tx, ty, tz, rx=0, ry=0, rz=0):
     return points[:, 0:3]
 
 
-# only work in lidar coordinate
 def box_transform(boxes, tx, ty, tz, r=0, coordinate='lidar'):
     # Input:
-    #   boxes: (N, 7) x y z h w l rz
+    #   boxes: (N, 7) x y z h w l rz/y
     # Output:
-    #   boxes: (N, 7) x y z h w l rz
+    #   boxes: (N, 7) x y z h w l rz/y
     boxes_corner = center_to_corner_box3d(
         boxes, coordinate=coordinate)  # (N, 8, 3)
     for idx in range(len(boxes_corner)):

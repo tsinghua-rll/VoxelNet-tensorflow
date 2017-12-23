@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Sat 23 Dec 2017 07:07:26 PM CST
+# Last Modified : Sat 23 Dec 2017 09:40:08 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -168,7 +168,7 @@ class RPN3D(object):
         vox_coordinate = data[4]
         print('train', tag)
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(
-            label, self.rpn_output_shape, self.anchors)
+            label, self.rpn_output_shape, self.anchors, cls=cfg.DETECT_OBJ, coordinate='lidar')
         pos_equal_one_for_reg = np.concatenate(
             [np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
         pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(
@@ -290,15 +290,15 @@ class RPN3D(object):
         ret_box3d = []
         ret_score = []
         for batch_id in range(len(self.avail_gpus) * self.single_batch_size):
-            # BOTTLENECK
-            # TODO: if possible, use rotate NMS
+            # remove box with low score
             ind = np.where(batch_probs[batch_id, :] >= cfg.RPN_SCORE_THRESH)[0]
             tmp_boxes3d = batch_boxes3d[batch_id, ind, ...]
             tmp_boxes2d = batch_boxes2d[batch_id, ind, ...]
             tmp_scores = batch_probs[batch_id, ind]
 
+            # TODO: if possible, use rotate NMS
             boxes2d = corner_to_standup_box2d(
-                center_to_corner_box2d(tmp_boxes2d))
+                center_to_corner_box2d(tmp_boxes2d, coordinate='lidar'))
             ind = session.run(self.box2d_ind_after_nms, {
                 self.boxes2d: boxes2d,
                 self.boxes2d_scores: tmp_scores
