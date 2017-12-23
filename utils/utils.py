@@ -26,13 +26,13 @@ def lidar_to_bird_view(x, y, factor=1):
 def angle_in_limit(angle):
     # To limit the angle in -pi/2 - pi/2
     limit_degree = 5
-    while angle >= np.pi/2:
+    while angle >= np.pi / 2:
         angle -= np.pi
-    while angle < -np.pi/2:
+    while angle < -np.pi / 2:
         angle += np.pi
-    if abs(angle+np.pi/2) < limit_degree/180*np.pi:
-        angle = np.pi/2
-    return angle 
+    if abs(angle + np.pi / 2) < limit_degree / 180 * np.pi:
+        angle = np.pi / 2
+    return angle
 
 
 def camera_to_lidar(x, y, z):
@@ -54,10 +54,11 @@ def lidar_to_camera(x, y, z):
 def camera_to_lidar_point(points):
     # (N, 3) -> (N, 3)
     N = points.shape[0]
-    points = np.hstack([points, np.ones((N, 1))]).T # (N,4) -> (4,N)
+    points = np.hstack([points, np.ones((N, 1))]).T  # (N,4) -> (4,N)
 
     points = np.matmul(np.linalg.inv(np.array(cfg.MATRIX_R_RECT_0)), points)
-    points = np.matmul(np.linalg.inv(np.array(cfg.MATRIX_T_VELO_2_CAM)), points).T #(4, N) -> (N, 4)
+    points = np.matmul(np.linalg.inv(
+        np.array(cfg.MATRIX_T_VELO_2_CAM)), points).T  # (4, N) -> (N, 4)
     points = points[:, 0:3]
     return points.reshape(-1, 3)
 
@@ -102,7 +103,8 @@ def center_to_corner_box2d(boxes_center, coordinate='lidar'):
     N = boxes_center.shape[0]
     boxes3d_center = np.zeros((N, 7))
     boxes3d_center[:, [0, 1, 4, 5, 6]] = boxes_center
-    boxes3d_corner = center_to_corner_box3d(boxes3d_center, coordinate=coordinate)
+    boxes3d_corner = center_to_corner_box3d(
+        boxes3d_center, coordinate=coordinate)
 
     return boxes3d_corner[:, 0:4, 0:2]
 
@@ -151,7 +153,8 @@ def corner_to_center_box2d(boxes_corner, coordinate='lidar'):
     boxes3d_corner = np.zeros((N, 8, 3))
     boxes3d_corner[:, 0:4, 0:2] = boxes_corner
     boxes3d_corner[:, 4:8, 0:2] = boxes_corner
-    boxes3d_center = corner_to_center_box3d(boxes3d_corner, coordinate=coordinate)
+    boxes3d_center = corner_to_center_box3d(
+        boxes3d_corner, coordinate=coordinate)
 
     return boxes3d_center[:, [0, 1, 4, 5, 6]]
 
@@ -221,7 +224,7 @@ def corner_to_center_box3d(boxes_corner, coordinate='camera'):
             ) / 8
             if w > l:
                 w, l = l, w
-                ry = angle_in_limit(ry+np.pi/2)
+                ry = angle_in_limit(ry + np.pi / 2)
         else:  # max version
             h = max(abs(roi[:4, 1] - roi[4:, 1]))
             w = np.max(
@@ -249,7 +252,7 @@ def corner_to_center_box3d(boxes_corner, coordinate='camera'):
             ) / 8
             if w > l:
                 w, l = l, w
-                ry = angle_in_limit(ry+np.pi/2)
+                ry = angle_in_limit(ry + np.pi / 2)
         ret.append([x, y, z, h, w, l, ry])
     if coordinate == 'lidar':
         ret = camera_to_lidar_box(np.array(ret))
@@ -266,11 +269,11 @@ def lidar_box3d_to_camera_box(boxes3d, cal_projection=False):
 
     lidar_boxes3d_corner = center_to_corner_box3d(boxes3d, coordinate='lidar')
     P2 = np.array(cfg.MATRIX_P2)
-    
+
     for n in range(num):
         box3d = lidar_boxes3d_corner[n]
         box3d = lidar_to_camera_point(box3d)
-        points = np.hstack((box3d, np.ones((8, 1)))).T # (8, 4) -> (4, 8)
+        points = np.hstack((box3d, np.ones((8, 1)))).T  # (8, 4) -> (4, 8)
         points = np.matmul(P2, points).T
         points[:, 0] /= points[:, 2]
         points[:, 1] /= points[:, 2]
@@ -664,12 +667,15 @@ def box_transform(boxes, tx, ty, tz, r=0, coordinate='lidar'):
     #   boxes: (N, 7) x y z h w l rz
     # Output:
     #   boxes: (N, 7) x y z h w l rz
-    boxes_corner = center_to_corner_box3d(boxes, coordinate=coordinate)  # (N, 8, 3)
+    boxes_corner = center_to_corner_box3d(
+        boxes, coordinate=coordinate)  # (N, 8, 3)
     for idx in range(len(boxes_corner)):
         if coordinate == 'lidar':
-            boxes_corner[idx] = point_transform(boxes_corner[idx], tx, ty, tz, rz=r)
+            boxes_corner[idx] = point_transform(
+                boxes_corner[idx], tx, ty, tz, rz=r)
         else:
-            boxes_corner[idx] = point_transform(boxes_corner[idx], tx, ty, tz, ry=r)
+            boxes_corner[idx] = point_transform(
+                boxes_corner[idx], tx, ty, tz, ry=r)
 
     return corner_to_center_box3d(boxes_corner, coordinate=coordinate)
 
@@ -680,10 +686,10 @@ def cal_iou2d(box1, box2):
     # Output:
     #   iou
     x1, y1, w1, l1, r1 = box1
-    x2, y2, w2, l2, r2 = box2 
-    c1 = shapely.geometry.box(-w1/2.0, -l1/2.0, w1/2.0, l1/2.0)
-    c2 = shapely.geometry.box(-w2/2.0, -l2/2.0, w2/2.0, l2/2.0)
-    
+    x2, y2, w2, l2, r2 = box2
+    c1 = shapely.geometry.box(-w1 / 2.0, -l1 / 2.0, w1 / 2.0, l1 / 2.0)
+    c2 = shapely.geometry.box(-w2 / 2.0, -l2 / 2.0, w2 / 2.0, l2 / 2.0)
+
     c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
     c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
 
@@ -692,36 +698,37 @@ def cal_iou2d(box1, box2):
 
     intersect = c1.intersection(c2)
 
-    return intersect.area/(c1.area + c2.area - intersect.area)
+    return intersect.area / (c1.area + c2.area - intersect.area)
+
 
 def cal_z_intersect(cz1, h1, cz2, h2):
-    b1z1, b1z2 = cz1 - h1/2, cz1 + h1/2
-    b2z1, b2z2 = cz2 - h2/2, cz2 + h2/2
+    b1z1, b1z2 = cz1 - h1 / 2, cz1 + h1 / 2
+    b2z1, b2z2 = cz2 - h2 / 2, cz2 + h2 / 2
     if b1z1 > b2z2 or b2z1 > b1z2:
         return 0
     elif b2z1 <= b1z1 <= b2z2:
         if b1z2 <= b2z2:
-            return h1/h2     
+            return h1 / h2
         else:
-            return (b2z2-b1z1)/(b1z2-b2z1)
+            return (b2z2 - b1z1) / (b1z2 - b2z1)
     elif b1z1 < b2z1 < b1z2:
         if b2z2 <= b1z2:
-            return h2/h1 
+            return h2 / h1
         else:
-            return (b1z2-b2z1)/(b2z2-b1z1)
+            return (b1z2 - b2z1) / (b2z2 - b1z1)
 
 
 def cal_iou3d(box1, box2):
     # Input:
     #   box1/2: x, y, z, h, w, l, r
     # Output:
-    #   iou 
+    #   iou
 
     x1, y1, z1, h1, w1, l1, r1 = box1
-    x2, y2, z2, h2, w2, l2, r2 = box2 
-    c1 = shapely.geometry.box(-w1/2.0, -l1/2.0, w1/2.0, l1/2.0)
-    c2 = shapely.geometry.box(-w2/2.0, -l2/2.0, w2/2.0, l2/2.0)
-    
+    x2, y2, z2, h2, w2, l2, r2 = box2
+    c1 = shapely.geometry.box(-w1 / 2.0, -l1 / 2.0, w1 / 2.0, l1 / 2.0)
+    c2 = shapely.geometry.box(-w2 / 2.0, -l2 / 2.0, w2 / 2.0, l2 / 2.0)
+
     c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
     c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
 
@@ -732,7 +739,7 @@ def cal_iou3d(box1, box2):
 
     intersect = c1.intersection(c2)
 
-    return intersect.area*z_intersect/(c1.area*h1 + c2.area*h2 - intersect.area*z_intersect)
+    return intersect.area * z_intersect / (c1.area * h1 + c2.area * h2 - intersect.area * z_intersect)
 
 
 def cal_box3d_iou(boxes3d, gt_boxes3d, cal_3d=0):
@@ -748,14 +755,16 @@ def cal_box3d_iou(boxes3d, gt_boxes3d, cal_3d=0):
     for idx in range(N1):
         for idy in range(N2):
             if cal_3d:
-                output[idx, idy] = float(cal_iou3d(boxes3d[idx], gt_boxes3d[idy]))
+                output[idx, idy] = float(
+                    cal_iou3d(boxes3d[idx], gt_boxes3d[idy]))
             else:
-                output[idx, idy] = float(cal_iou2d(boxes3d[idx, [0,1,4,5,6]], gt_boxes3d[idy, [0,1,4,5,6]]))
+                output[idx, idy] = float(
+                    cal_iou2d(boxes3d[idx, [0, 1, 4, 5, 6]], gt_boxes3d[idy, [0, 1, 4, 5, 6]]))
 
-    return output 
+    return output
 
 
-def cal_box2d_iou(boxes2d, gt_boxes2d): 
+def cal_box2d_iou(boxes2d, gt_boxes2d):
     # Inputs:
     #   boxes2d: (N1, 5) x,y,w,l,r
     #   gt_boxes2d: (N2, 5) x,y,w,l,r
@@ -768,7 +777,7 @@ def cal_box2d_iou(boxes2d, gt_boxes2d):
         for idy in range(N2):
             output[idx, idy] = cal_iou2d(boxes2d[idx], gt_boxes2d[idy])
 
-    return output 
+    return output
 
 
 if __name__ == '__main__':

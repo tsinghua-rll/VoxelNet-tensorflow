@@ -4,7 +4,7 @@
 # File Name : data_aug.py
 # Purpose :
 # Creation Date : 21-12-2017
-# Last Modified : Sat 23 Dec 2017 06:49:41 PM CST
+# Last Modified : Sat 23 Dec 2017 07:18:27 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import numpy as np
@@ -17,7 +17,7 @@ import glob
 from utils import *
 
 object_dir = './data/object'
-output_path = os.path.join(object_dir, 'training_aug')
+output_path = os.path.join(object_dir, 'training')
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('-i', '--aug-amount', type=int, nargs='?', default=1000)
@@ -36,11 +36,12 @@ def worker(tag):
     gt_box3d = label_to_gt_box3d(np.array(label)[np.newaxis, :], cls='')[
         0]  # (N', 7) x, y, z, h, w, l, r
 
-    choice = np.random.randint(1, 4)
-    if choice == 1:
+    choice = np.random.randint(1, 10)
+    if choice >= 6:
         # TODO: all in lidar coordinate
         lidar_center_gt_box3d = camera_to_lidar_box(gt_box3d)
-        lidar_corner_gt_box3d = center_to_corner_box3d(lidar_center_gt_box3d, coordinate='lidar')
+        lidar_corner_gt_box3d = center_to_corner_box3d(
+            lidar_center_gt_box3d, coordinate='lidar')
         for idx in range(len(lidar_corner_gt_box3d)):
             # TODO: precisely gather the point
             t_rz = np.random.uniform(-np.pi / 10, np.pi / 10)
@@ -50,14 +51,15 @@ def worker(tag):
             # check collision
             tmp = box_transform(
                 lidar_center_gt_box3d[[idx]], t_x, t_y, t_z, t_rz, 'lidar')
-            is_collision=False
+            is_collision = False
             for idy in range(idx):
-                x1, y1, w1, l1, r1 = tmp[0][[0,1,4,5,6]]
-                x2, y2, w2, l2, r2 = lidar_center_gt_box3d[idy][[0,1,4,5,6]]
-                iou = cal_iou2d(np.array([x1,y1,w1,l1,r1], dtype=np.float32), 
-                        np.array([x2,y2,w2,l2,r2], dtype=np.float32))
+                x1, y1, w1, l1, r1 = tmp[0][[0, 1, 4, 5, 6]]
+                x2, y2, w2, l2, r2 = lidar_center_gt_box3d[idy][[
+                    0, 1, 4, 5, 6]]
+                iou = cal_iou2d(np.array([x1, y1, w1, l1, r1], dtype=np.float32),
+                                np.array([x2, y2, w2, l2, r2], dtype=np.float32))
                 if iou > 0:
-                    is_collision=True
+                    is_collision = True
                     break
             if not is_collision:
                 box_corner = lidar_corner_gt_box3d[idx]
@@ -79,24 +81,23 @@ def worker(tag):
                     lidar[bound_box, 0:3], t_x, t_y, t_z, rz=t_rz)
                 lidar_center_gt_box3d[idx] = box_transform(
                     lidar_center_gt_box3d[[idx]], t_x, t_y, t_z, t_rz, 'lidar')
-        
+
         gt_box3d = lidar_to_camera_box(lidar_center_gt_box3d)
-        newtag = '{}_{}_{}'.format(
-            tag, choice, np.random.randint(1, args.aug_amount))
-    elif choice == 2:
-        # global scaling
-        factor = np.random.uniform(0.95, 1.05)
-        lidar = lidar * factor
-        gt_box3d[:, 0:6] = gt_box3d[:, 0:6] * factor
-        newtag = '{}_{}_{:.4f}'.format(tag, choice, factor)
-    else:
+        newtag = 'aug_{}_1_{}'.format(
+            tag, np.random.randint(1, args.aug_amount))
+    elif choice <= 5 and choice >= 3:
         # global rotation
         angle = np.random.uniform(-np.pi / 4, np.pi / 4)
         lidar[:, 0:3] = point_transform(lidar[:, 0:3], 0, 0, 0, rz=angle)
         gt_box3d = box_transform(gt_box3d, 0, 0, 0, -angle, 'camera')
-        newtag = '{}_{}_{:.4f}'.format(tag, choice, angle)
+        newtag = 'aug_{}_2_{:.4f}'.format(tag, angle).replace('.', '_')
+    else:
+        # global scaling
+        factor = np.random.uniform(0.95, 1.05)
+        lidar = lidar * factor
+        gt_box3d[:, 0:6] = gt_box3d[:, 0:6] * factor
+        newtag = 'aug_{}_3_{:.4f}'.format(tag, factor).replace('.', '_')
 
-    from IPython import embed; embed()
     label = box3d_to_label(gt_box3d[np.newaxis, ...], cls[np.newaxis, ...])[
         0]  # (N')
     cv2.imwrite(os.path.join(output_path, 'image_2', newtag + '.png'), rgb)

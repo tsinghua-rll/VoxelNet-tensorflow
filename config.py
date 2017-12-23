@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : 2017年12月23日 星期六 13时28分21秒
+# Last Modified : 2017年12月23日 星期六 18时50分41秒
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -173,7 +173,6 @@ __C.RPN_SCORE_THRESH = 0.90
 
 # utils
 __C.CORNER2CENTER_AVG = True  # average version or max version
-
 
 if __name__ == '__main__':
     print('__C.ROOT_DIR = ' + __C.ROOT_DIR)
