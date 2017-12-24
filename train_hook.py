@@ -4,7 +4,7 @@
 # File Name : train_hook.py
 # Purpose :
 # Creation Date : 14-12-2017
-# Last Modified : 2017-12-14 Thu 00:59:06
+# Last Modified : Sat 23 Dec 2017 11:45:38 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import os
@@ -24,7 +24,7 @@ def check_if_should_pause(tag):
     return ret
 
 
-def pause_trainer():
+def pause_trainer(args):
     fname = args.tag + '.pause.pkl'
     if os.path.exists(fname):
         os.remove(fname)
@@ -36,4 +36,4 @@ if __name__ == '__main__':
     parser.add_argument('--tag', type=str, nargs='?', default='default')
     args = parser.parse_args()
 
-    pause_trainer()
+    pause_trainer(args)

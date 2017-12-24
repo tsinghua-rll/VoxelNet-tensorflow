@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : Thu 21 Dec 2017 09:03:36 PM CST
+# Last Modified : Sat 23 Dec 2017 09:58:28 PM CST
 # Created By : Jialin Zhao
 
 import tensorflow as tf
@@ -104,7 +104,6 @@ class MiddleAndRPN:
             self.p_pos = tf.sigmoid(p_map)
             self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
 
-            # TODO: sometime still get inf cls loss
             self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos + small_addon_for_BCE)) / self.pos_equal_one_sum \
                 + beta * (-self.neg_equal_one * tf.log(1 - self.p_pos +
                                                        small_addon_for_BCE)) / self.neg_equal_one_sum

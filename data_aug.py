@@ -4,7 +4,7 @@
 # File Name : data_aug.py
 # Purpose :
 # Creation Date : 21-12-2017
-# Last Modified : Sat 23 Dec 2017 08:48:15 PM CST
+# Last Modified : Sat 23 Dec 2017 11:58:13 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import numpy as np
@@ -37,7 +37,7 @@ def worker(tag):
         0]  # (N', 7) x, y, z, h, w, l, r
 
     choice = np.random.randint(1, 10)
-    if choice >= 6:
+    if choice >= 10:
         lidar_center_gt_box3d = camera_to_lidar_box(gt_box3d)
         lidar_corner_gt_box3d = center_to_corner_box3d(
             lidar_center_gt_box3d, coordinate='lidar')
@@ -84,7 +84,8 @@ def worker(tag):
         gt_box3d = lidar_to_camera_box(lidar_center_gt_box3d)
         newtag = 'aug_{}_1_{}'.format(
             tag, np.random.randint(1, args.aug_amount))
-    elif choice <= 5 and choice >= 3:
+    elif True:
+    # elif choice <= 7 and choice >= 2:
         # global rotation
         angle = np.random.uniform(-np.pi / 4, np.pi / 4)
         lidar[:, 0:3] = point_transform(lidar[:, 0:3], 0, 0, 0, rz=angle)
@@ -111,7 +112,7 @@ def worker(tag):
 
 
 def main():
-    fl = glob.glob(os.path.join(object_dir, 'training', 'velodyne', '*.bin'))
+    fl = glob.glob(os.path.join(object_dir, 'training', 'calib', '*.txt'))
     candidate = [f.split('/')[-1].split('.')[0] for f in fl]
     tags = []
     for _ in range(args.aug_amount):
