@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : Sat 23 Dec 2017 09:58:28 PM CST
+# Last Modified : Tue 26 Dec 2017 03:16:37 PM CST
 # Created By : Jialin Zhao
 
 import tensorflow as tf
@@ -99,7 +99,7 @@ class MiddleAndRPN:
                            training=self.training, name='conv20')
             # Regression(residual) map, scale = [None, 200/100, 176/120, 14]
             r_map = ConvMD(2, 768, 14, 1, (1, 1), (0, 0),
-                           temp_conv, training=self.training, name='conv21')
+                           temp_conv, training=self.training, activation=False, name='conv21')
             # softmax output for positive anchor and negative anchor, scale = [None, 200/100, 176/120, 1]
             self.p_pos = tf.sigmoid(p_map)
             self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
@@ -133,7 +133,7 @@ def smooth_l1(deltas, targets, sigma=3.0):
     return smooth_l1
 
 
-def ConvMD(M, Cin, Cout, k, s, p, input, training=True, name='conv'):
+def ConvMD(M, Cin, Cout, k, s, p, input, training=True, activation=True, name='conv'):
     temp_p = np.array(p)
     temp_p = np.lib.pad(temp_p, (1, 1), 'constant', constant_values=(0, 0))
     with tf.variable_scope(name) as scope:
@@ -149,8 +149,10 @@ def ConvMD(M, Cin, Cout, k, s, p, input, training=True, name='conv'):
                 pad, Cout, k, strides=s, padding="valid", reuse=tf.AUTO_REUSE, name=scope)
         temp_conv = tf.layers.batch_normalization(
             temp_conv, axis=-1, fused=True, training=training, reuse=tf.AUTO_REUSE, name=scope)
-        return tf.nn.relu(temp_conv)
-
+        if activation:
+            return tf.nn.relu(temp_conv)
+        else:
+            return temp_conv
 
 def Deconv2D(Cin, Cout, k, s, p, input, training=True, name='deconv'):
     temp_p = np.array(p)
