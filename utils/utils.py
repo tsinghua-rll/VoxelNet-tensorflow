@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Sat 23 Dec 2017 08:51:09 PM CST
+# Last Modified : Tue 26 Dec 2017 03:44:11 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -20,8 +20,11 @@ from utils.box_overlaps import *
 
 def lidar_to_bird_view(x, y, factor=1):
     # using the cfg.INPUT_XXX
-    return (x - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor, (y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor
-
+    a = (x - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor
+    b = (y - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor
+    a = np.clip(a, a_max=(cfg.X_MAX - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor, a_min=0)
+    b = np.clip(b, a_max=(cfg.Y_MAX - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor, a_min=0)
+    return a, b
 
 def angle_in_limit(angle):
     # To limit the angle in -pi/2 - pi/2
