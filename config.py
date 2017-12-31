@@ -4,7 +4,7 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Sat 23 Dec 2017 09:38:49 PM CST
+# Last Modified : Fri 29 Dec 2017 12:04:03 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
@@ -166,9 +166,9 @@ if __C.DETECT_OBJ == 'Cyclist':
     __C.RPN_NEG_IOU = 0.35
 
 # for rpn nms
-__C.RPN_NMS_POST_TOPK = 50
-__C.RPN_NMS_THRESH = 0.5
-__C.RPN_SCORE_THRESH = 0.90
+__C.RPN_NMS_POST_TOPK = 30
+__C.RPN_NMS_THRESH = 0.7
+__C.RPN_SCORE_THRESH = 0.94
 
 
 # utils
