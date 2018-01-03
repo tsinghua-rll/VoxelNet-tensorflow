@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Thu 21 Dec 2017 07:48:49 PM CST
+# Last Modified : Wed 03 Jan 2018 04:55:18 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 model = RPN3D(
                     cls=cfg.DETECT_OBJ,
                     single_batch_size=args.single_batch_size,
-                    is_train=False,
+                    is_train=True,
                     avail_gpus=cfg.GPU_AVAILABLE.split(',')
                 )
                 if tf.train.get_checkpoint_state(save_model_dir):
@@ -69,11 +69,7 @@ if __name__ == '__main__':
                     for tag, result in zip(*ret):
                         of_path = os.path.join(args.output_path, tag + '.txt')
                         with open(of_path, 'w+') as f:
-                            for item in result:
-                                item[1:8] = lidar_to_camera_box(
-                                    item[1:8][np.newaxis, :].astype(np.float32))[0]
-                                box2d = lidar_box3d_to_camera_box(
-                                    item[1:8][np.newaxis, :].astype(np.float32), cal_projection=False)[0]
-                                f.write('{:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}\n'.format(
-                                    item[0], 0, 0, 0, *box2d, *(item[1:])))
-                        print('write out {}'.format(of_path))
+                            labels = box3d_to_label([result[:, 1:8]], [result[:, 0]], [result[:, -1]], coordinate='lidar')[0]
+                            for line in labels:
+                                f.write(line)
+                            print('write out {} objects to {}'.format(len(labels), tag))

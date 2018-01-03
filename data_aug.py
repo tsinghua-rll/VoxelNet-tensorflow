@@ -4,7 +4,7 @@
 # File Name : data_aug.py
 # Purpose :
 # Creation Date : 21-12-2017
-# Last Modified : Sun 31 Dec 2017 05:45:13 PM CST
+# Last Modified : Mon 01 Jan 2018 09:26:32 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import numpy as np
@@ -26,6 +26,7 @@ args = parser.parse_args()
 
 
 def worker(tag):
+    np.random.seed()
     rgb = cv2.resize(cv2.imread(os.path.join(object_dir, 'training',
                                              'image_2', tag + '.png')), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT))
     lidar = np.fromfile(os.path.join(object_dir, 'training',

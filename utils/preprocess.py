@@ -4,7 +4,7 @@
 # File Name : preprocess.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : Sat 23 Dec 2017 07:17:00 PM CST
+# Last Modified : Mon 01 Jan 2018 01:06:04 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import os
@@ -13,30 +13,27 @@ import numpy as np
 
 from config import cfg
 
-if cfg.DETECT_OBJ == 'Car':
-    scene_size = np.array([4, 80, 70.4], dtype=np.float32)
-    voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
-    grid_size = np.array([10, 400, 352], dtype=np.int64)
-    lidar_coord = np.array([0, 40, 3], dtype=np.float32)
-    data_dir = 'velodyne'
-    output_dir = 'voxel'
-    max_point_number = 35
-else:
-    scene_size = np.array([4, 40, 48], dtype=np.float32)
-    voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
-    grid_size = np.array([10, 200, 240], dtype=np.int64)
-    lidar_coord = np.array([0, 20, 3], dtype=np.float32)
-    data_dir = 'velodyne'
-    output_dir = 'voxel_ped'
-    max_point_number = 45
-
+data_dir = 'velodyne'
 
 def process_pointcloud(point_cloud, cls=cfg.DETECT_OBJ):
     # Input:
     #   (N, 4)
     # Output:
     #   voxel_dict
-    np.random.shuffle(point_cloud)
+    if cls == 'Car':
+        scene_size = np.array([4, 80, 70.4], dtype=np.float32)
+        voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
+        grid_size = np.array([10, 400, 352], dtype=np.int64)
+        lidar_coord = np.array([0, 40, 3], dtype=np.float32)
+        max_point_number = 35
+    else:
+        scene_size = np.array([4, 40, 48], dtype=np.float32)
+        voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
+        grid_size = np.array([10, 200, 240], dtype=np.int64)
+        lidar_coord = np.array([0, 20, 3], dtype=np.float32)
+        max_point_number = 45
+
+        np.random.shuffle(point_cloud)
 
     shifted_coord = point_cloud[:, :3] + lidar_coord
     # reverse the point cloud coordinate (X, Y, Z) -> (Z, Y, X)
@@ -95,6 +92,7 @@ def worker(filelist):
 
         name, extension = os.path.splitext(file)
         voxel_dict = process_pointcloud(point_cloud)
+        output_dir = 'voxel' if cfg.DETECT_OBJ == 'Car' else 'voxel_ped'
         np.savez_compressed(os.path.join(output_dir, name), **voxel_dict)
 
 

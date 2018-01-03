@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Sun 31 Dec 2017 05:42:41 PM CST
+# Last Modified : Wed 03 Jan 2018 03:59:05 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -462,7 +462,7 @@ def box3d_to_label(batch_box3d, batch_cls, batch_score=[], coordinate='camera'):
                 x, y, z, h, w, l, r = box3d
                 box3d = [h, w, l, x, y, z, r]
                 label.append(template.format(
-                    cls, 0, 0, 0, *box2d, *box3d, score))
+                    cls, 0, 0, 0, *box2d, *box3d, float(score)))
             batch_label.append(label)
     else:
         template = '{} ' + ' '.join(['{:.4f}' for i in range(14)]) + '\n'

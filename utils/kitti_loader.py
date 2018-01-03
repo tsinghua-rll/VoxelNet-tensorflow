@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Thu 21 Dec 2017 11:49:21 PM CST
+# Last Modified : Wed 03 Jan 2018 04:21:18 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -39,7 +39,7 @@ class KittiLoader(object):
         assert(use_multi_process_num >= 0)
         self.object_dir = object_dir
         self.is_testset = is_testset
-        self.use_multi_process_num = use_multi_process_num
+        self.use_multi_process_num = use_multi_process_num if not self.is_testset else 1
         self.require_shuffle = require_shuffle if not self.is_testset else False
         self.batch_size = batch_size
         self.split_file = split_file
