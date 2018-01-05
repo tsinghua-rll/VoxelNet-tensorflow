@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Wed 03 Jan 2018 04:21:18 PM CST
+# Last Modified : Fri 05 Jan 2018 09:32:43 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -76,15 +76,14 @@ class KittiLoader(object):
             self.f_voxel.sort()
 
         self.data_tag = [name.split('/')[-1].split('.')[-2]
-                         for name in self.f_label]
+                         for name in self.f_rgb]
         # assert(len(self.f_rgb) == len(self.f_lidar) == len(self.f_label) == len(self.data_tag))
-        assert(len(self.f_voxel) == len(self.f_label) == len(
-            self.data_tag) == len(self.f_rgb) == len(self.f_lidar))
-        self.dataset_size = len(self.f_label)
+        assert(len(self.f_voxel) == len(self.data_tag) == len(self.f_rgb) == len(self.f_lidar))
+        self.dataset_size = len(self.f_rgb)
         self.already_extract_data = 0
         self.cur_frame_info = ''
 
-        print("Dataset total length: {}".format(len(self.f_label)))
+        print("Dataset total length: {}".format(self.dataset_size))
         if self.require_shuffle:
             self.shuffle_dataset()
 
@@ -134,8 +133,11 @@ class KittiLoader(object):
                     self.f_rgb[load_index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT)))
                 raw_lidar.append(np.fromfile(
                     self.f_lidar[load_index], dtype=np.float32).reshape((-1, 4)))
-                labels.append([line for line in open(
-                    self.f_label[load_index], 'r').readlines()])
+                if not self.is_testset:
+                    labels.append([line for line in open(
+                        self.f_label[load_index], 'r').readlines()])
+                else:
+                    labels.append([''])
                 tag.append(self.data_tag[load_index])
                 voxel.append(np.load(self.f_voxel[load_index]))
 

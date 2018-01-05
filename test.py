@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Wed 03 Jan 2018 04:55:18 PM CST
+# Last Modified : Fri 05 Jan 2018 09:35:00 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     save_model_dir = os.path.join('./save_model', args.tag)
 
     with tf.Graph().as_default():
-        with KittiLoader(object_dir=os.path.join(dataset_dir, 'testing'), queue_size=100, require_shuffle=False, is_testset=True, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as test_loader:
+        with KittiLoader(object_dir=os.path.join(dataset_dir, 'testing_real'), queue_size=100, require_shuffle=False, is_testset=True, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as test_loader:
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION,
                                         visible_device_list=cfg.GPU_AVAILABLE,
                                         allow_growth=True)
@@ -62,7 +62,7 @@ if __name__ == '__main__':
                     if data is None:
                         print('test done.')
                         break
-                    ret = model.predict_step(sess, data)
+                    ret = model.predict_step(sess, data, summary=False)
                     # ret: A, B
                     # A: (N) tag
                     # B: (N, N') (class, x, y, z, h, w, l, rz, score)

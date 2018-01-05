@@ -4,7 +4,7 @@
 # File Name : model.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Sun 31 Dec 2017 06:12:55 PM CST
+# Last Modified : Fri 05 Jan 2018 09:34:48 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import sys
@@ -269,8 +269,9 @@ class RPN3D(object):
         img = data[5]
         lidar = data[6]
 
-        batch_gt_boxes3d = label_to_gt_box3d(
-            label, cls=self.cls, coordinate='lidar')
+        if summary:
+            batch_gt_boxes3d = label_to_gt_box3d(
+                label, cls=self.cls, coordinate='lidar')
         print('predict', tag)
         input_feed = {}
         for idx in range(len(self.avail_gpus)):
