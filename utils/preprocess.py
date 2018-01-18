@@ -4,7 +4,7 @@
 # File Name : preprocess.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : Mon 01 Jan 2018 01:06:04 PM CST
+# Last Modified : Thu 18 Jan 2018 05:34:42 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import os
@@ -77,7 +77,7 @@ def process_pointcloud(point_cloud, cls=cfg.DETECT_OBJ):
             number_buffer[index] += 1
 
     feature_buffer[:, :, -3:] = feature_buffer[:, :, :3] - \
-        feature_buffer[:, :, :3].mean(axis=1, keepdims=True)
+        feature_buffer[:, :, :3].sum(axis=1, keepdims=True)/number_buffer.reshape(K, 1, 1)
 
     voxel_dict = {'feature_buffer': feature_buffer,
                   'coordinate_buffer': coordinate_buffer,
