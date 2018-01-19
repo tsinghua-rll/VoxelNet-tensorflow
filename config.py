@@ -4,11 +4,11 @@
 # File Name : config.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Wed 03 Jan 2018 03:53:01 PM CST
+# Last Modified : Fri 19 Jan 2018 01:11:28 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 
-"""MV3D config system.
+"""VoxelNet config system.
 """
 
 import os
@@ -72,17 +72,6 @@ __C.LOG_DIR = osp.join('log')
 __C.VELODYNE_ANGULAR_RESOLUTION = 0.08 / 180 * math.pi
 __C.VELODYNE_VERTICAL_RESOLUTION = 0.4 / 180 * math.pi
 __C.VELODYNE_HEIGHT = 1.73
-# front
-__C.FRONT_R_OFFSET = 70
-__C.FRONT_C_OFFSET = 750
-__C.FRONT_R_MAX = 30
-__C.FRONT_R_MIN = -70
-__C.FRONT_C_MAX = 750
-__C.FRONT_C_MIN = -750
-
-__C.FRONT_WIDTH = __C.FRONT_C_MAX - __C.FRONT_C_MIN
-__C.FRONT_HEIGHT = __C.FRONT_R_MAX - __C.FRONT_R_MIN
-__C.FRONT_CHANNEL = 3
 # rgb
 if __C.DATA_SETS_TYPE == 'kitti':
     __C.IMAGE_WIDTH = 1242

@@ -4,7 +4,7 @@
 # File Name : data_aug.py
 # Purpose :
 # Creation Date : 21-12-2017
-# Last Modified : Fri 19 Jan 2018 10:36:19 AM CST
+# Last Modified : Fri 19 Jan 2018 01:06:35 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import numpy as np

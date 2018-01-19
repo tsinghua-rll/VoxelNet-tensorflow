@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Fri 19 Jan 2018 10:34:56 AM CST
+# Last Modified : Fri 19 Jan 2018 01:05:34 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -21,6 +21,7 @@ from multiprocessing import Lock, Process, Queue as Queue, Value, Array, cpu_cou
 
 from config import cfg
 from utils.data_aug import aug_data
+from utils.preprocess import process_pointcloud
 
 # for non-raw dataset
 
@@ -50,8 +51,7 @@ class KittiLoader(object):
         if self.split_file != '':
             # use split file
             _tag = []
-            # self.f_rgb, self.f_lidar, self.f_label = [], [], []
-            self.f_voxel, self.f_label = [], [], []
+            self.f_rgb, self.f_lidar, self.f_label = [], [], []
             for line in open(self.split_file, 'r').readlines():
                 line = line[:-1]  # remove '\n'
                 _tag.append(line)
@@ -59,8 +59,6 @@ class KittiLoader(object):
                     self.object_dir, 'image_2', line + '.png'))
                 self.f_lidar.append(os.path.join(
                     self.object_dir, 'velodyne', line + '.bin'))
-                self.f_voxel.append(os.path.join(
-                    self.object_dir, 'voxel' if cfg.DETECT_OBJ == 'Car' else 'voxel_ped', line + '.npz'))
                 self.f_label.append(os.path.join(
                     self.object_dir, 'label_2', line + '.txt'))
         else:
@@ -73,14 +71,10 @@ class KittiLoader(object):
             self.f_label = glob.glob(os.path.join(
                 self.object_dir, 'label_2', '*.txt'))
             self.f_label.sort()
-            self.f_voxel = glob.glob(os.path.join(
-                self.object_dir, 'voxel' if cfg.DETECT_OBJ == 'Car' else 'voxel_ped', '*.npz'))
-            self.f_voxel.sort()
 
         self.data_tag = [name.split('/')[-1].split('.')[-2]
                          for name in self.f_rgb]
-        # assert(len(self.f_rgb) == len(self.f_lidar) == len(self.f_label) == len(self.data_tag))
-        assert(len(self.f_voxel) == len(self.data_tag) == len(self.f_rgb) == len(self.f_lidar))
+        assert(len(self.data_tag) == len(self.f_rgb) == len(self.f_lidar))
         self.dataset_size = len(self.f_rgb)
         self.already_extract_data = 0
         self.cur_frame_info = ''
@@ -149,7 +143,7 @@ class KittiLoader(object):
                     else:
                         labels.append([''])
                     tag.append(self.data_tag[load_index])
-                    voxel.append(np.load(self.f_voxel[load_index]))
+                    voxel.append(process_pointcloud(raw_lidar[-1]))
 
                 load_index += 1
             except:
