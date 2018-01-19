@@ -4,7 +4,7 @@
 # File Name : utils.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Wed 03 Jan 2018 03:59:05 PM CST
+# Last Modified : Fri 19 Jan 2018 11:20:20 AM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -25,6 +25,19 @@ def lidar_to_bird_view(x, y, factor=1):
     a = np.clip(a, a_max=(cfg.X_MAX - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor, a_min=0)
     b = np.clip(b, a_max=(cfg.Y_MAX - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor, a_min=0)
     return a, b
+
+def batch_lidar_to_bird_view(points, factor=1):
+    # Input:
+    #   points (N, 2)
+    # Outputs:
+    #   points (N, 2)
+    # using the cfg.INPUT_XXX
+    a = (points[:, 0] - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor
+    b = (points[:, 1] - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor
+    a = np.clip(a, a_max=(cfg.X_MAX - cfg.X_MIN) / cfg.VOXEL_X_SIZE * factor, a_min=0)
+    b = np.clip(b, a_max=(cfg.Y_MAX - cfg.Y_MIN) / cfg.VOXEL_Y_SIZE * factor, a_min=0)
+    return np.concatenate([a[:, np.newaxis], b[:, np.newaxis]], axis=-1)
+
 
 def angle_in_limit(angle):
     # To limit the angle in -pi/2 - pi/2
@@ -418,7 +431,7 @@ def label_to_gt_box3d(labels, cls='Car', coordinate='camera'):
         acc_cls = ['Pedestrian']
     elif cls == 'Cyclist':
         acc_cls = ['Cyclist']
-    else:
+    else: # all
         acc_cls = []
 
     for label in labels:
@@ -540,6 +553,10 @@ def cal_rpn_target(labels, feature_map_shape, anchors, cls='Car', coordinate='li
             np.ascontiguousarray(anchors_standup_2d).astype(np.float32),
             np.ascontiguousarray(gt_standup_2d).astype(np.float32),
         )
+        # iou = cal_box3d_iou(
+        #     anchors_reshaped,
+        #     batch_gt_boxes3d[batch_id]
+        # )
 
         # find anchor with highest iou(iou should also > 0)
         id_highest = np.argmax(iou.T, axis=1)
@@ -683,25 +700,22 @@ def box_transform(boxes, tx, ty, tz, r=0, coordinate='lidar'):
 
 
 def cal_iou2d(box1, box2):
-    # Input:
+    # Input: 
     #   box1/2: x, y, w, l, r
-    # Output:
+    # Output :
     #   iou
-    x1, y1, w1, l1, r1 = box1
-    x2, y2, w2, l2, r2 = box2
-    c1 = shapely.geometry.box(-w1 / 2.0, -l1 / 2.0, w1 / 2.0, l1 / 2.0)
-    c2 = shapely.geometry.box(-w2 / 2.0, -l2 / 2.0, w2 / 2.0, l2 / 2.0)
-
-    c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
-    c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
-
-    c1 = shapely.affinity.translate(c1, x1, y1)
-    c2 = shapely.affinity.translate(c2, x2, y2)
-
-    intersect = c1.intersection(c2)
-
-    return intersect.area / (c1.area + c2.area - intersect.area)
-
+    buf1 = np.zeros((cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 3))
+    buf2 = np.zeros((cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 3))
+    tmp = center_to_corner_box2d(np.array([box1, box2]), coordinate='lidar')
+    box1_corner = batch_lidar_to_bird_view(tmp[0]).astype(np.int32)
+    box2_corner = batch_lidar_to_bird_view(tmp[1]).astype(np.int32)
+    buf1 = cv2.fillConvexPoly(buf1, box1_corner, color=(1,1,1))[..., 0]
+    buf2 = cv2.fillConvexPoly(buf2, box2_corner, color=(1,1,1))[..., 0]
+    indiv = np.sum(np.absolute(buf1-buf2))
+    share = np.sum((buf1 + buf2) == 2)
+    if indiv == 0:
+        return 0.0 # when target is out of bound
+    return share / (indiv + share)
 
 def cal_z_intersect(cz1, h1, cz2, h2):
     b1z1, b1z2 = cz1 - h1 / 2, cz1 + h1 / 2
@@ -725,23 +739,21 @@ def cal_iou3d(box1, box2):
     #   box1/2: x, y, z, h, w, l, r
     # Output:
     #   iou
-
-    x1, y1, z1, h1, w1, l1, r1 = box1
-    x2, y2, z2, h2, w2, l2, r2 = box2
-    c1 = shapely.geometry.box(-w1 / 2.0, -l1 / 2.0, w1 / 2.0, l1 / 2.0)
-    c2 = shapely.geometry.box(-w2 / 2.0, -l2 / 2.0, w2 / 2.0, l2 / 2.0)
-
-    c1 = shapely.affinity.rotate(c1, r1, use_radians=True)
-    c2 = shapely.affinity.rotate(c2, r2, use_radians=True)
-
-    c1 = shapely.affinity.translate(c1, x1, y1)
-    c2 = shapely.affinity.translate(c2, x2, y2)
-
+    buf1 = np.zeros((cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 3))
+    buf2 = np.zeros((cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 3))
+    tmp = center_to_corner_box2d(np.array([box1[[0,1,4,5,6]], box2[[0,1,4,5,6]]]), coordinate='lidar')
+    box1_corner = batch_lidar_to_bird_view(tmp[0]).astype(np.int32)
+    box2_corner = batch_lidar_to_bird_view(tmp[1]).astype(np.int32)
+    buf1 = cv2.fillConvexPoly(buf1, box1_corner, color=(1,1,1))[..., 0]
+    buf2 = cv2.fillConvexPoly(buf2, box2_corner, color=(1,1,1))[..., 0]
+    share = np.sum((buf1 + buf2) == 2)
+    area1 = np.sum(buf1)
+    area2 = np.sum(buf2)
+    
+    z1, h1, z2, h2 = box1[2], box1[3], box2[2], box2[3]
     z_intersect = cal_z_intersect(z1, h1, z2, h2)
 
-    intersect = c1.intersection(c2)
-
-    return intersect.area * z_intersect / (c1.area * h1 + c2.area * h2 - intersect.area * z_intersect)
+    return share * z_intersect / (area1 * h1 + area2 * h2 - share * z_intersect)
 
 
 def cal_box3d_iou(boxes3d, gt_boxes3d, cal_3d=0):
