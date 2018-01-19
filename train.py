@@ -4,7 +4,7 @@
 # File Name : train.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Sun 31 Dec 2017 06:13:27 PM CST
+# Last Modified : Fri 19 Jan 2018 10:38:47 AM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import glob
@@ -43,9 +43,9 @@ def main(_):
     with tf.Graph().as_default():
         global save_model_dir
         with KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True,
-                         is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as train_loader, \
+                         is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT, aug=True) as train_loader, \
             KittiLoader(object_dir=os.path.join(dataset_dir, 'testing'), queue_size=50, require_shuffle=True,
-                        is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT) as valid_loader:
+                        is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT, aug=False) as valid_loader:
 
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION,
                                         visible_device_list=cfg.GPU_AVAILABLE,
@@ -115,12 +115,12 @@ def main(_):
 
                     if is_summary_image:
                         ret = model.predict_step(
-                            sess, valid_loader.load(), summary=True)
+                                sess, valid_loader.load(), summary=True)
                         summary_writer.add_summary(ret[-1], iter)
 
                     if is_validate:
                         ret = model.validate_step(
-                            sess, valid_loader.load(), summary=True)
+                                sess, valid_loader.load(), summary=True)
                         summary_writer.add_summary(ret[-1], iter)
 
                     if check_if_should_pause(args.tag):

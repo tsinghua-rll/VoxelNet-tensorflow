@@ -4,7 +4,7 @@
 # File Name : data_aug.py
 # Purpose :
 # Creation Date : 21-12-2017
-# Last Modified : Mon 01 Jan 2018 09:26:32 PM CST
+# Last Modified : Fri 19 Jan 2018 10:36:19 AM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import numpy as np
@@ -14,25 +14,20 @@ import multiprocessing as mp
 import argparse
 import glob
 
-from utils import *
+from utils.utils import *
+from utils.preprocess import *
 
 object_dir = './data/object'
-output_path = os.path.join(object_dir, 'training_aug')
-
-parser = argparse.ArgumentParser(description='')
-parser.add_argument('-i', '--aug-amount', type=int, nargs='?', default=1000)
-parser.add_argument('-n', '--num-workers', type=int, nargs='?', default=10)
-args = parser.parse_args()
 
 
-def worker(tag):
+def aug_data(tag, object_dir):
     np.random.seed()
-    rgb = cv2.resize(cv2.imread(os.path.join(object_dir, 'training',
+    rgb = cv2.resize(cv2.imread(os.path.join(object_dir,
                                              'image_2', tag + '.png')), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT))
-    lidar = np.fromfile(os.path.join(object_dir, 'training',
+    lidar = np.fromfile(os.path.join(object_dir,
                                      'velodyne', tag + '.bin'), dtype=np.float32).reshape(-1, 4)
     label = np.array([line for line in open(os.path.join(
-        object_dir, 'training', 'label_2', tag + '.txt'), 'r').readlines()])  # (N')
+        object_dir, 'label_2', tag + '.txt'), 'r').readlines()])  # (N')
     cls = np.array([line.split()[0] for line in label])  # (N')
     gt_box3d = label_to_gt_box3d(np.array(label)[np.newaxis, :], cls='', coordinate='camera')[
         0]  # (N', 7) x, y, z, h, w, l, r
@@ -88,7 +83,7 @@ def worker(tag):
 
         gt_box3d = lidar_to_camera_box(lidar_center_gt_box3d)
         newtag = 'aug_{}_1_{}'.format(
-            tag, np.random.randint(1, args.aug_amount))
+            tag, np.random.randint(1, 1024))
     elif choice < 7 and choice >= 4:
         # global rotation
         angle = np.random.uniform(-np.pi / 4, np.pi / 4)
@@ -107,10 +102,17 @@ def worker(tag):
         newtag = 'aug_{}_3_{:.4f}'.format(tag, factor).replace('.', '_')
 
     label = box3d_to_label(gt_box3d[np.newaxis, ...], cls[np.newaxis, ...], coordinate='camera')[0]  # (N')
+    voxel_dict = process_pointcloud(lidar)
+    return newtag, rgb, lidar, voxel_dict, label 
+
+
+def worker(tag):
+    new_tag, rgb, lidar, voxel_dict, label = aug_data(tag)
+    output_path = os.path.join(object_dir, 'training_aug')
+
     cv2.imwrite(os.path.join(output_path, 'image_2', newtag + '.png'), rgb)
     lidar.reshape(-1).tofile(os.path.join(output_path,
                                           'velodyne', newtag + '.bin'))
-    voxel_dict = process_pointcloud(lidar)
     np.savez_compressed(os.path.join(
         output_path, 'voxel' if cfg.DETECT_OBJ == 'Car' else 'voxel_ped', newtag), **voxel_dict)
     with open(os.path.join(output_path, 'label_2', newtag + '.txt'), 'w+') as f:
@@ -131,4 +133,9 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('-i', '--aug-amount', type=int, nargs='?', default=1000)
+    parser.add_argument('-n', '--num-workers', type=int, nargs='?', default=10)
+    args = parser.parse_args()
+
     main()

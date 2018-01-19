@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Fri 05 Jan 2018 09:32:43 PM CST
+# Last Modified : Fri 19 Jan 2018 10:34:56 AM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -20,6 +20,7 @@ from sklearn.utils import shuffle
 from multiprocessing import Lock, Process, Queue as Queue, Value, Array, cpu_count
 
 from config import cfg
+from utils.data_aug import aug_data
 
 # for non-raw dataset
 
@@ -35,7 +36,7 @@ class KittiLoader(object):
     # vox_number
     # vox_coordinate
 
-    def __init__(self, object_dir='.', queue_size=20, require_shuffle=False, is_testset=True, batch_size=1, use_multi_process_num=0, split_file='', multi_gpu_sum=1):
+    def __init__(self, object_dir='.', queue_size=20, require_shuffle=False, is_testset=True, batch_size=1, use_multi_process_num=0, split_file='', multi_gpu_sum=1, aug=False):
         assert(use_multi_process_num >= 0)
         self.object_dir = object_dir
         self.is_testset = is_testset
@@ -44,6 +45,7 @@ class KittiLoader(object):
         self.batch_size = batch_size
         self.split_file = split_file
         self.multi_gpu_sum = multi_gpu_sum
+        self.aug = aug
 
         if self.split_file != '':
             # use split file
@@ -129,17 +131,25 @@ class KittiLoader(object):
         labels, tag, voxel, rgb, raw_lidar = [], [], [], [], []
         for _ in range(batch_size):
             try:
-                rgb.append(cv2.resize(cv2.imread(
-                    self.f_rgb[load_index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT)))
-                raw_lidar.append(np.fromfile(
-                    self.f_lidar[load_index], dtype=np.float32).reshape((-1, 4)))
-                if not self.is_testset:
-                    labels.append([line for line in open(
-                        self.f_label[load_index], 'r').readlines()])
+                if self.aug:
+                    ret = aug_data(self.data_tag[load_index], self.object_dir)
+                    tag.append(ret[0])
+                    rgb.append(ret[1])
+                    raw_lidar.append(ret[2])
+                    voxel.append(ret[3])
+                    labels.append(ret[4])
                 else:
-                    labels.append([''])
-                tag.append(self.data_tag[load_index])
-                voxel.append(np.load(self.f_voxel[load_index]))
+                    rgb.append(cv2.resize(cv2.imread(
+                        self.f_rgb[load_index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT)))
+                    raw_lidar.append(np.fromfile(
+                        self.f_lidar[load_index], dtype=np.float32).reshape((-1, 4)))
+                    if not self.is_testset:
+                        labels.append([line for line in open(
+                            self.f_label[load_index], 'r').readlines()])
+                    else:
+                        labels.append([''])
+                    tag.append(self.data_tag[load_index])
+                    voxel.append(np.load(self.f_voxel[load_index]))
 
                 load_index += 1
             except:
