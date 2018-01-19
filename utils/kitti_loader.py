@@ -4,7 +4,7 @@
 # File Name : kitti_loader.py
 # Purpose :
 # Creation Date : 09-12-2017
-# Last Modified : Fri 19 Jan 2018 01:05:34 PM CST
+# Last Modified : Fri 19 Jan 2018 03:11:15 PM CST
 # Created By : Jeasine Ma [jeasinema[at]gmail[dot]com]
 
 import cv2
@@ -242,7 +242,6 @@ class KittiLoader(object):
         self.f_label = [self.f_label[i] for i in index]
         self.f_rgb = [self.f_rgb[i] for i in index]
         self.f_lidar = [self.f_lidar[i] for i in index]
-        self.f_voxel = [self.f_voxel[i] for i in index]
         self.data_tag = [self.data_tag[i] for i in index]
 
     def get_frame_info(self):
