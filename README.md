@@ -1,6 +1,6 @@
 # VoxelNet-tensorflow
 
-A tensorflow inplementation for [VoxelNet](https://arxiv.org/abs/1711.06396).
+A tensorflow implementation for [VoxelNet](https://arxiv.org/abs/1711.06396).
 
 # Usage
 
