@@ -4,7 +4,7 @@
 # File Name : rpn.py
 # Purpose :
 # Creation Date : 10-12-2017
-# Last Modified : Tue 26 Dec 2017 03:16:37 PM CST
+# Last Modified : Thu 08 Mar 2018 02:20:43 PM CST
 # Created By : Jialin Zhao
 
 import tensorflow as tf
@@ -95,7 +95,7 @@ class MiddleAndRPN:
             # final:
             temp_conv = tf.concat([deconv3, deconv2, deconv1], -1)
             # Probability score map, scale = [None, 200/100, 176/120, 2]
-            p_map = ConvMD(2, 768, 2, 1, (1, 1), (0, 0), temp_conv,
+            p_map = ConvMD(2, 768, 2, 1, (1, 1), (0, 0), temp_conv, activation=False,
                            training=self.training, name='conv20')
             # Regression(residual) map, scale = [None, 200/100, 176/120, 14]
             r_map = ConvMD(2, 768, 14, 1, (1, 1), (0, 0),
